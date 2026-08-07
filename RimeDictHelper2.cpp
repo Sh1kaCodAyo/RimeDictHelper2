@@ -268,11 +268,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 		return FALSE;
 	}
 
-	CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 20, 20, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 20, 50, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 50, 60, 25, hWnd, NULL, hInstance, NULL);
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 20, 80, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
 	CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
 	CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
