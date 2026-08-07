@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="RimeDictHelper2.vcxproj" Id="b031d556-a2c8-4245-84a3-67122ed9082c" />
+</Solution>

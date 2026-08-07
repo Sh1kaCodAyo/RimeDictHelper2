@@ -1,0 +1,55 @@
+# .gitignore 文件内容
+
+# 编译输出目录
+x64/
+Debug/
+Release/
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+*.res
+*.idb
+*.log
+*.recipe
+
+# 构建中间文件
+*.[Oo]bj
+*.user
+*.aps
+*.ncb
+*.suo
+*.sdf
+*.opensdf
+*.sln.docstates
+
+# 调试文件
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+
+# 编译器生成文件
+*.tlog/
+*.lastbuildstate
+*.CL.*.tlog
+*.link.*.tlog
+*.rc.*.tlog
+
+# VS 特定
+.vs/
+.vscode/
+*.VC.db
+*.VC.opendb
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+
+# 打包文件
+*.zip
+*.7z
+*.rar
