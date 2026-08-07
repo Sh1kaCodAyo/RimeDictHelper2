@@ -18,11 +18,18 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 HWND hWord, hCode, hWeight, hParent;
 HFONT g_hFont;
 
+// 子类化需要的变量
+WNDPROC g_oldWordProc = NULL;
+WNDPROC g_oldCodeProc = NULL;
+WNDPROC g_oldWeightProc = NULL;
+
 // Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+ATOM MyRegisterClass(HINSTANCE hInstance);
+BOOL InitInstance(HINSTANCE, int);
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+void addAndSync(HWND hWnd);
+LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM); // 新增
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -83,6 +90,51 @@ ATOM MyRegisterClass(HINSTANCE hInstance) {
 	return RegisterClassExW(&wcex);
 }
 
+// 编辑框的子类化窗口过程
+LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	WNDPROC oldProc = NULL;
+	if (hWnd == hWord) oldProc = g_oldWordProc;
+	else if (hWnd == hCode) oldProc = g_oldCodeProc;
+	else if (hWnd == hWeight) oldProc = g_oldWeightProc;
+
+	switch (message) {
+	case WM_KEYDOWN: {
+		if (wParam == VK_RETURN) {
+			HWND hParent = GetParent(hWnd);
+			addAndSync(hParent);
+			return 0;
+		}
+		else if (wParam == VK_TAB) {
+			bool bShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+			HWND hNext = NULL;
+
+			if (!bShift) {
+				if (hWnd == hWord) hNext = hCode;
+				else if (hWnd == hCode) hNext = hWeight;
+				else if (hWnd == hWeight) hNext = hWord;
+			}
+			else {
+				if (hWnd == hWord) hNext = hWeight;
+				else if (hWnd == hCode) hNext = hWord;
+				else if (hWnd == hWeight) hNext = hCode;
+			}
+
+			if (hNext) {
+				SetFocus(hNext);
+				SendMessage(hNext, EM_SETSEL, 0, -1);
+			}
+			return 0;
+		}
+		break;
+	}
+	}
+
+	if (oldProc) {
+		return CallWindowProc(oldProc, hWnd, message, wParam, lParam);
+	}
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
 // 回调函数
 BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 	SendMessage(hChild, WM_SETFONT, (WPARAM)lParam, TRUE);
@@ -120,6 +172,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
+
+	// 设置子类化（在创建所有编辑框之后）
+	g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+	g_oldCodeProc = (WNDPROC)SetWindowLongPtr(hCode, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+	g_oldWeightProc = (WNDPROC)SetWindowLongPtr(hWeight, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -196,10 +254,18 @@ void addAndSync(HWND hWnd) {
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
+
+	case WM_CTLCOLORSTATIC: {
+		// 让静态文本背景透明
+		HDC hdcStatic = (HDC)wParam;
+		SetBkMode(hdcStatic, TRANSPARENT);
+		// 可选：设置文本颜色（如果不想要默认黑色）
+		// SetTextColor(hdcStatic, RGB(0, 0, 0));
+		return (LRESULT)GetStockObject(NULL_BRUSH);
+	}
+
 	case WM_COMMAND: {
-		//OutputDebugString(L"call: WM_COMMAND\n");
 		int wmId = LOWORD(wParam);
-		// Parse the menu selections:
 		switch (wmId) {
 		case ID_SYNC_BTN: {
 			addAndSync(hWnd);
@@ -220,7 +286,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		OutputDebugString(L"call: WM_PAINT\n");
 		PAINTSTRUCT ps;
 		BeginPaint(hWnd, &ps);
-		// TODO: Add any drawing code here...
 		EndPaint(hWnd, &ps);
 		break;
 	}
@@ -235,7 +300,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	return 0;
 }
-
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
 	UNREFERENCED_PARAMETER(lParam);
