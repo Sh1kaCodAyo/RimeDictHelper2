@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <string>
 #include <cstring>
+#include <commctrl.h>
 #include "framework.h"
 #include "RimeDictHelper2.h"
 
@@ -107,26 +108,80 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	if (!hWnd) {
 		return FALSE;
 	}
-	g_hFont = CreateFont(22, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 
 	CreateWindowW(L"STATIC", L"词语：", WS_CHILD | WS_VISIBLE, 20, 20, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD, hInstance, NULL);
-
 	CreateWindowW(L"STATIC", L"编码：", WS_CHILD | WS_VISIBLE, 20, 50, 60, 25, hWnd, NULL, hInstance, NULL);
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
-
 	CreateWindowW(L"STATIC", L"权重：", WS_CHILD | WS_VISIBLE, 20, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
-
 	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 80, 120, 100, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
 
+	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
 	return TRUE;
+}
+
+// 配置文件路径
+const wchar_t* CONFIG_FILE = L".\\config.ini";
+
+// 读取配置
+std::wstring GetDictPath() {
+	wchar_t path[512] = { 0 };
+	GetPrivateProfileStringW(L"Settings", L"DictPath", L"", path, 512, CONFIG_FILE);
+	return std::wstring(path);
+}
+
+// 保存配置
+void SaveDictPath(const std::wstring& path) {
+	WritePrivateProfileStringW(L"Settings", L"DictPath", path.c_str(), CONFIG_FILE);
+}
+
+void addAndSync(HWND hWnd) {
+
+	// 获取输入内容
+	wchar_t word[256], code[256], weight[256];
+	GetDlgItemTextW(hWnd, ID_WORD, word, 256);
+	GetDlgItemTextW(hWnd, ID_CODE, code, 256);
+	GetDlgItemTextW(hWnd, ID_WEIGHT, weight, 256);
+
+	// 校验参数
+	if (wcslen(word) == 0 || wcslen(code) == 0) {
+		MessageBoxW(hWnd, L"词语和编码不能为空！", L"提示", MB_OK | MB_ICONWARNING);
+		return;
+	}
+
+	// 权重默认为20
+	if (wcslen(weight) == 0) {
+		wcscpy_s(weight, L"20");
+	}
+
+	// 拼接追加行内容
+	wchar_t line[512];
+	swprintf(line, 512, L"%s\t%s\t%s\n", word, code, weight);
+	OutputDebugStringW(line);
+
+	// 获取词典文件路径
+	std::wstring dictPath = GetDictPath();
+	errno_t err;
+	FILE* fp = nullptr;
+	err = _wfopen_s(&fp, dictPath.c_str(), L"a, ccs=UTF-8");
+
+	// 追加词典行
+	if (err == 0 && fp != nullptr) {
+		fputws(line, fp);
+		fclose(fp);
+	} else {
+		MessageBoxW(hWnd, L"无法打开词典文件！", L"错误", MB_OK | MB_ICONERROR);
+		return;
+	}
+
+	ShellExecuteW(NULL, L"open", L".\\sync.bat", NULL, NULL, SW_SHOW);
 }
 
 //
@@ -147,28 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		// Parse the menu selections:
 		switch (wmId) {
 		case ID_SYNC_BTN: {
-			// 获取输入内容
-			wchar_t word[256], code[256], weight[256];
-			GetDlgItemTextW(hWnd, ID_WORD, word, 256);
-			GetDlgItemTextW(hWnd, ID_CODE, code, 256);
-			GetDlgItemTextW(hWnd, ID_WEIGHT, weight, 256);
-
-			if (wcslen(word) == 0 || wcslen(code) == 0) {
-				MessageBoxW(hWnd, L"词语和编码不能为空！", L"提示", MB_OK | MB_ICONWARNING);
-				break;
-			}
-
-			// 权重默认为20
-			if (wcslen(weight) == 0) {
-				wcscpy_s(weight, L"20");
-			}
-
-			// 拼接追加行内容
-			wchar_t line[512];
-			swprintf(line, 512, L"%s\t%s\t%s\n", word, code, weight);
-			OutputDebugStringW(line);
-
-
+			addAndSync(hWnd);
 			break;
 		}
 		case IDM_ABOUT:
