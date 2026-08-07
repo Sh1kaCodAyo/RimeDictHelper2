@@ -297,6 +297,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
+	// 将焦点设置到词语输入框
+	SetFocus(hWord);
+	// 可选：全选已有内容（如果有的话），方便直接覆盖输入
+	SendMessage(hWord, EM_SETSEL, 0, -1);
+
 	return TRUE;
 }
 
