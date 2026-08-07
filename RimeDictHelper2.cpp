@@ -9,7 +9,9 @@
 #define ID_WORD 101
 #define ID_CODE 102
 #define ID_WEIGHT 103
-#define ID_SYNC_BTN 114
+#define ID_ADD_BTN 112
+#define ID_SYNC_BTN 113
+#define ID_ADD_SYNC_BTN 114
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -28,6 +30,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+int add(HWND hWnd);
+void sync(HWND hWnd);
 void addAndSync(HWND hWnd);
 LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM); // 新增
 
@@ -245,8 +249,20 @@ BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hInst = hInstance; // Store instance handle in our global variable
 
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-		CW_USEDEFAULT, CW_USEDEFAULT, 290, 230, nullptr, nullptr, hInstance, nullptr);
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	int winWidth = 290;
+	int winHeight = 230;
+
+	// 黄金分割位置：宽度取 1/3，高度取 1/4（也可以调整）
+	int x = (screenWidth - winWidth) / 3;
+	int y = (screenHeight - winHeight) / 3;
+
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle,
+		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+		x, y, winWidth, winHeight, nullptr, nullptr, hInstance, nullptr);
+	//HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+		//CW_USEDEFAULT, CW_USEDEFAULT, 290, 230, nullptr, nullptr, hInstance, nullptr);
 
 	if (!hWnd) {
 		return FALSE;
@@ -258,7 +274,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
 	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 20, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
-	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 80, 120, 100, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
+	CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
+	CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
+	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
 
 	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
@@ -297,8 +315,7 @@ void SaveDictPath(const std::wstring& path) {
 	WritePrivateProfileStringW(L"Settings", L"DictPath", path.c_str(), CONFIG_FILE);
 }
 
-void addAndSync(HWND hWnd) {
-
+int add(HWND hWnd) {
 	// 获取输入内容
 	wchar_t word[256], code[256], weight[256];
 	GetDlgItemTextW(hWnd, ID_WORD, word, 256);
@@ -308,7 +325,7 @@ void addAndSync(HWND hWnd) {
 	// 校验参数
 	if (wcslen(word) == 0 || wcslen(code) == 0) {
 		MessageBoxW(hWnd, L"词语和编码不能为空！", L"提示", MB_OK | MB_ICONWARNING);
-		return;
+		return -1;
 	}
 
 	// 权重默认为20
@@ -331,12 +348,20 @@ void addAndSync(HWND hWnd) {
 	if (err == 0 && fp != nullptr) {
 		fputws(line, fp);
 		fclose(fp);
+		return 0;
 	} else {
 		MessageBoxW(hWnd, L"无法打开词典文件！", L"错误", MB_OK | MB_ICONERROR);
-		return;
+		return -1;
 	}
-
+}
+void sync(HWND hWnd) {
 	ShellExecuteW(NULL, L"open", L".\\sync.bat", NULL, NULL, SW_SHOW);
+}
+void addAndSync(HWND hWnd) {
+	int addresp = add(hWnd);
+	if (addresp == 0) {
+		sync(hWnd);
+	}
 }
 
 //
@@ -364,7 +389,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_COMMAND: {
 		int wmId = LOWORD(wParam);
 		switch (wmId) {
+		case ID_ADD_BTN: {
+			add(hWnd);
+			break;
+		}
 		case ID_SYNC_BTN: {
+			sync(hWnd);
+			break;
+		}
+		case ID_ADD_SYNC_BTN: {
 			addAndSync(hWnd);
 			break;
 		}
