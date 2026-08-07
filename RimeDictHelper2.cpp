@@ -98,7 +98,98 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	else if (hWnd == hWeight) oldProc = g_oldWeightProc;
 
 	switch (message) {
-	case WM_KEYDOWN: {
+	case WM_CHAR: {
+		wchar_t ch = (wchar_t)wParam;
+
+		// 允许的控制字符：退格(8)、删除(127)、回车(13)、Tab(9)、Esc(27)
+		if (ch == VK_BACK || ch == VK_DELETE || ch == VK_RETURN ||
+			ch == VK_TAB || ch == VK_ESCAPE) {
+			break; // 让这些字符通过
+		}
+
+		// 编码输入框限制
+		if (hWnd == hCode) {
+			// 只允许英文字母
+			if (!iswalpha(ch) || !iswascii(ch)) {
+				MessageBeep(MB_ICONWARNING);
+				return 0;
+			}
+
+			// 获取当前文本长度（考虑可能的中文输入法候选）
+			int len = GetWindowTextLengthW(hWnd);
+			if (len >= 4) {
+				MessageBeep(MB_ICONWARNING);
+				return 0;
+			}
+		}
+
+		// 权重输入框限制
+		if (hWnd == hWeight) {
+			// 只允许数字
+			if (!iswdigit(ch)) {
+				MessageBeep(MB_ICONWARNING);
+				return 0;
+			}
+
+			// 获取当前选择范围和文本
+			DWORD start, end;
+			SendMessage(hWnd, EM_GETSEL, (WPARAM)&start, (LPARAM)&end);
+
+			wchar_t currentText[256];
+			GetWindowTextW(hWnd, currentText, 256);
+			std::wstring newText = currentText;
+
+			// 处理输入
+			if (start != end) {
+				newText.replace(start, end - start, 1, ch);
+			}
+			else {
+				newText.insert(start, 1, ch);
+			}
+
+			// 验证范围：0-100
+			if (!newText.empty()) {
+				// 检查是否只包含数字（防止非数字字符）
+				bool valid = true;
+				for (wchar_t c : newText) {
+					if (!iswdigit(c)) {
+						valid = false;
+						break;
+					}
+				}
+
+				if (valid) {
+					int value = _wtoi(newText.c_str());
+					if (value < 0 || value > 100) {
+						MessageBeep(MB_ICONWARNING);
+						return 0;
+					}
+				}
+			}
+		}
+		break;
+	}
+
+				// 额外处理：当失去焦点或用户粘贴时，验证内容
+	case WM_KILLFOCUS: {
+		if (hWnd == hWeight) {
+			wchar_t text[256];
+			GetWindowTextW(hWnd, text, 256);
+			if (wcslen(text) > 0) {
+				int value = _wtoi(text);
+				if (value < 0 || value > 100) {
+					// 自动修正为边界值
+					if (value < 0) {
+						SetWindowTextW(hWnd, L"0");
+					}
+					else if (value > 100) {
+						SetWindowTextW(hWnd, L"100");
+					}
+				}
+			}
+		}
+		break;
+	}	case WM_KEYDOWN: {
 		if (wParam == VK_RETURN) {
 			HWND hParent = GetParent(hWnd);
 			addAndSync(hParent);
@@ -161,11 +252,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 		return FALSE;
 	}
 
-	CreateWindowW(L"STATIC", L"词语：", WS_CHILD | WS_VISIBLE, 20, 20, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 20, 20, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"编码：", WS_CHILD | WS_VISIBLE, 20, 50, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 20, 50, 60, 25, hWnd, NULL, hInstance, NULL);
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"权重：", WS_CHILD | WS_VISIBLE, 20, 80, 60, 25, hWnd, NULL, hInstance, NULL);
+	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 20, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
 	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 80, 120, 100, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
 
@@ -173,6 +264,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
 
+	// 为编码输入框设置最大长度
+	SendMessage(hWord, EM_LIMITTEXT, 10, 0);
+	// 为编码输入框设置最大长度
+	SendMessage(hCode, EM_LIMITTEXT, 4, 0);
+	// 为权重输入框设置最大长度（3位足够，因为100是3位）
+	SendMessage(hWeight, EM_LIMITTEXT, 3, 0);
 	// 设置子类化（在创建所有编辑框之后）
 	g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
 	g_oldCodeProc = (WNDPROC)SetWindowLongPtr(hCode, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
