@@ -18,6 +18,7 @@
 #define IDC_STATUSBAR 120
 #define WM_LOAD_DICT (WM_USER + 100)
 #define WM_LOAD_DICT_COMPLETE (WM_USER + 101)
+#define WM_SCRIPT_COMPLETE (WM_USER + 102)
 
 // Global Variables:
 const wchar_t* CONFIG_FILE = L".\\config.ini";
@@ -28,7 +29,7 @@ const wchar_t* SCRIPT_NAME = L".\\after.bat";
 extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 HFONT g_hFont;
 HINSTANCE hInst;
-HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync;
+HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, g_hWnd;
 std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
@@ -41,6 +42,7 @@ bool FileExists(const std::wstring& filePath);
 bool IsSyncScriptAvailable();
 bool LoadBaseDict(const std::wstring& filePath);
 DWORD WINAPI LoadDictThread(LPVOID lpParam);
+DWORD WINAPI WaitForScriptThread(LPVOID lpParam);
 int add(HWND hWnd);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
@@ -313,8 +315,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
 	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, NULL);
 	hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
-	hBtnSync = CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
-	hBtnAddSync = CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
+	hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
+	hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
 	hStatusBar = CreateWindowW( STATUSCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR, hInstance, NULL);
 
 	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
@@ -335,6 +337,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
+	g_hWnd = hWnd;
 
 	// 将焦点设置到词语输入框
 	SetFocus(hWord);
@@ -450,13 +453,91 @@ int add(HWND hWnd) {
 	}
 }
 void sync(HWND hWnd) {
-	ShellExecuteW(NULL, L"open", SCRIPT_NAME, NULL, NULL, SW_SHOW);
+//	ShellExecuteW(NULL, L"open", SCRIPT_NAME, NULL, NULL, SW_HIDE);
+	// 检查脚本是否存在
+	if (!IsSyncScriptAvailable()) {
+		MessageBoxW(hWnd, L"同步脚本不存在！", L"提示", MB_OK | MB_ICONWARNING);
+		UpdateSyncButtonState(hWnd);
+		return;
+	}
+
+	// 禁用按钮，防止重复点击
+	EnableWindow(hBtnSync, FALSE);
+	EnableWindow(hBtnAddSync, FALSE);
+	SetStatusText(hWnd, L"正在执行部署脚本...");
+
+	// 构建命令行
+	std::wstring cmd = L"cmd.exe /c \"" + std::wstring(SCRIPT_NAME) + L"\"";
+
+	// 设置启动信息
+	STARTUPINFOW si = { sizeof(STARTUPINFOW) };
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE;  // 隐藏窗口
+
+	PROCESS_INFORMATION pi = { 0 };
+
+	// 创建进程
+	BOOL success = CreateProcessW(
+		NULL,
+		(LPWSTR)cmd.c_str(),
+		NULL,
+		NULL,
+		FALSE,
+		CREATE_NO_WINDOW,  // 不创建窗口
+		NULL,
+		NULL,
+		&si,
+		&pi
+	);
+
+	if (success) {
+		// 保存进程句柄到全局变量（用于后续等待）
+		// 或者直接在这里等待
+
+		// 方式A：同步等待（阻塞UI，不推荐）
+		// WaitForSingleObject(pi.hProcess, INFINITE);
+
+		// 方式B：异步等待（推荐）
+		// 在后台线程中等待，完成后通知主线程
+		HANDLE hThread = CreateThread(NULL, 0, WaitForScriptThread,
+			(LPVOID)pi.hProcess, 0, NULL);
+		if (hThread) {
+			CloseHandle(hThread);
+		}
+
+		CloseHandle(pi.hThread);
+	}
+	else {
+		MessageBoxW(hWnd, L"启动部署脚本失败！", L"错误", MB_OK | MB_ICONERROR);
+		EnableWindow(hBtnSync, TRUE);
+		EnableWindow(hBtnAddSync, TRUE);
+		SetStatusText(hWnd, L"部署失败");
+	}
 }
 void addAndSync(HWND hWnd) {
 	int addresp = add(hWnd);
 	if (addresp == 0) {
 		sync(hWnd);
 	}
+}
+
+// 等待脚本完成的线程
+DWORD WINAPI WaitForScriptThread(LPVOID lpParam) {
+	HANDLE hProcess = (HANDLE)lpParam;
+
+	// 等待进程结束
+	DWORD waitResult = WaitForSingleObject(hProcess, INFINITE);
+
+	// 获取退出码
+	DWORD exitCode = 0;
+	GetExitCodeProcess(hProcess, &exitCode);
+
+	CloseHandle(hProcess);
+
+	// 通知主线程
+	PostMessage(g_hWnd, WM_SCRIPT_COMPLETE, (WPARAM)exitCode, 0);
+
+	return 0;
 }
 
 //
@@ -500,6 +581,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		else {
 			SetStatusText(hWnd, L"基本词库加载失败");
 			OutputDebugStringW(L"基本词库加载失败\n");
+		}
+		break;
+	}
+	case WM_SCRIPT_COMPLETE: {
+		DWORD exitCode = (DWORD)wParam;
+
+		// 恢复按钮状态
+		EnableWindow(hBtnSync, TRUE);
+		EnableWindow(hBtnAddSync, TRUE);
+
+		if (exitCode == 0) {
+			SetStatusText(hWnd, L"部署完成");
+			//MessageBoxW(hWnd, L"部署完成！", L"提示", MB_OK | MB_ICONINFORMATION);
+		}
+		else {
+			std::wstring msg = L"部署失败，退出码: " + std::to_wstring(exitCode);
+			SetStatusText(hWnd, msg);
+			//MessageBoxW(hWnd, msg.c_str(), L"错误", MB_OK | MB_ICONERROR);
 		}
 		break;
 	}

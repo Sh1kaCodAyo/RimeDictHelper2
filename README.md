@@ -56,6 +56,8 @@ UserDictPath = D:\ProgramData\rime\wubi86_jidian_user.dict.yaml
 ```
 
 其中`BaseDictPath`用于读取单字编码，以便后续自动生成词组编码。
+
+
 `UserDictPath`则是用户词典，本工具的本质就是自动在这个文件尾部追加内容
 
 ### 5.2. after.bat
