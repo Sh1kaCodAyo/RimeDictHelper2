@@ -23,11 +23,12 @@
 const wchar_t* CONFIG_FILE = L".\\config.ini";
 const wchar_t* CONFIG_SECTION = L"Settings";
 const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
-const wchar_t* CONFIG_KEY_DICT = L"DictPath";
+const wchar_t* CONFIG_KEY_USER_DICT = L"UserDictPath";
+const wchar_t* SCRIPT_NAME = L".\\after.bat";
 extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 HFONT g_hFont;
 HINSTANCE hInst;
-HWND hWord, hCode, hWeight, hParent, hStatusBar;
+HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync;
 std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
@@ -36,6 +37,8 @@ WNDPROC g_oldWordProc = NULL, g_oldCodeProc = NULL, g_oldWeightProc = NULL;
 // function claim:
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
+bool FileExists(const std::wstring& filePath);
+bool IsSyncScriptAvailable();
 bool LoadBaseDict(const std::wstring& filePath);
 DWORD WINAPI LoadDictThread(LPVOID lpParam);
 int add(HWND hWnd);
@@ -50,6 +53,7 @@ void getCode(HWND hWnd);
 void ParseDictLine(const wchar_t* line);
 void SetStatusText(HWND hWnd, const std::wstring& text);
 void sync(HWND hWnd);
+void UpdateSyncButtonState(HWND hWnd);
 
 std::wstring getConfigValue(LPCWSTR lpKeyName) {
 	wchar_t path[512] = { 0 };
@@ -308,15 +312,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
 	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, NULL);
-	CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
-	CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
-	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
+	hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
+	hBtnSync = CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
+	hBtnAddSync = CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
 	hStatusBar = CreateWindowW( STATUSCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR, hInstance, NULL);
 
 	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
 	SetWindowTextW(hWeight, L"20");
+	UpdateSyncButtonState(hWnd);
 
 	// 为编码输入框设置最大长度
 	SendMessage(hWord, EM_LIMITTEXT, 10, 0);
@@ -342,7 +347,31 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	return TRUE;
 }
 
+// ========== 检测文件是否存在 ==========
+bool FileExists(const std::wstring& filePath) {
+	DWORD attrs = GetFileAttributesW(filePath.c_str());
+	return (attrs != INVALID_FILE_ATTRIBUTES &&
+		!(attrs & FILE_ATTRIBUTE_DIRECTORY));
+}
 
+// ========== 检测同步脚本是否存在 ==========
+bool IsSyncScriptAvailable() {
+	// 默认检测当前目录下的 sync.bat
+	return FileExists(SCRIPT_NAME);
+}
+
+// ========== 更新同步按钮状态 ==========
+void UpdateSyncButtonState(HWND hWnd) {
+	bool syncAvailable = IsSyncScriptAvailable();
+
+	// 获取按钮句柄（如果还没保存，可以通过 GetDlgItem 获取）
+	HWND hBtnSync = GetDlgItem(hWnd, ID_SYNC_BTN);
+	HWND hBtnAddSync = GetDlgItem(hWnd, ID_ADD_SYNC_BTN);
+
+	// 启用或禁用按钮
+	EnableWindow(hBtnSync, syncAvailable);
+	EnableWindow(hBtnAddSync, syncAvailable);
+}
 
 void getCode(HWND hWnd) {
 	//GetCharCode
@@ -405,7 +434,7 @@ int add(HWND hWnd) {
 	OutputDebugStringW(line);
 
 	// 获取词典文件路径
-	std::wstring dictPath = getConfigValue(CONFIG_KEY_DICT);
+	std::wstring dictPath = getConfigValue(CONFIG_KEY_USER_DICT);
 	errno_t err;
 	FILE* fp = nullptr;
 	err = _wfopen_s(&fp, dictPath.c_str(), L"a, ccs=UTF-8");
@@ -421,7 +450,7 @@ int add(HWND hWnd) {
 	}
 }
 void sync(HWND hWnd) {
-	ShellExecuteW(NULL, L"open", L".\\sync.bat", NULL, NULL, SW_SHOW);
+	ShellExecuteW(NULL, L"open", SCRIPT_NAME, NULL, NULL, SW_SHOW);
 }
 void addAndSync(HWND hWnd) {
 	int addresp = add(hWnd);
