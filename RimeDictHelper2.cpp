@@ -43,6 +43,7 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 std::wstring GetCharCode(const std::wstring& character);
+std::wstring GetCharCode(wchar_t ch);
 std::wstring GetLongestCode(const std::wstring& codeField);
 void addAndSync(HWND hWnd);
 void getCode(HWND hWnd);
@@ -360,28 +361,19 @@ void getCode(HWND hWnd) {
 	if (len == 1) {
 		codesw = GetCharCode(wordsw);
 	} else if (len == 2) {
-		std::wstring wordsw1 = wordsw.substr(0, 1);
-		std::wstring codesw1 = GetCharCode(wordsw1);
-		std::wstring wordsw2 = wordsw.substr(1, 1);
-		std::wstring codesw2 = GetCharCode(wordsw2);
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
 		codesw = codesw1.substr(0, 2) + codesw2.substr(0, 2);
 	} else if (len == 3) {
-		std::wstring wordsw1 = wordsw.substr(0, 1);
-		std::wstring codesw1 = GetCharCode(wordsw1);
-		std::wstring wordsw2 = wordsw.substr(1, 1);
-		std::wstring codesw2 = GetCharCode(wordsw2);
-		std::wstring wordsw3 = wordsw.substr(2, 1);
-		std::wstring codesw3 = GetCharCode(wordsw3);
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
+		std::wstring codesw3 = GetCharCode(wordsw[2]);
 		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 2);
 	} else { // len >= 4
-		std::wstring wordsw1 = wordsw.substr(0, 1);
-		std::wstring codesw1 = GetCharCode(wordsw1);
-		std::wstring wordsw2 = wordsw.substr(1, 1);
-		std::wstring codesw2 = GetCharCode(wordsw2);
-		std::wstring wordsw3 = wordsw.substr(2, 1);
-		std::wstring codesw3 = GetCharCode(wordsw3);
-		std::wstring wordsw4 = wordsw.substr(len - 1, 1);
-		std::wstring codesw4 = GetCharCode(wordsw4);
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
+		std::wstring codesw3 = GetCharCode(wordsw[2]);
+		std::wstring codesw4 = GetCharCode(wordsw[len - 1]);
 		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 1) + codesw4.substr(0, 1);
 	}  
 
@@ -734,6 +726,16 @@ std::wstring GetCharCode(const std::wstring& character) {
 		return it->second;
 	}
 	return L"";  // 未找到
+}
+
+// reload
+std::wstring GetCharCode(wchar_t ch) {
+	std::wstring key(1, ch);
+	auto it = g_charCodeMap.find(key);
+	if (it != g_charCodeMap.end()) {
+		return it->second;
+	}
+	return L"";
 }
 
 // ========== 获取词库统计信息（调试用） ==========
