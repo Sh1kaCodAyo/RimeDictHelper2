@@ -1,7 +1,9 @@
+#pragma once
 #include <windows.h>
 #include <string>
 #include <cstring>
 #include <commctrl.h>
+#include <unordered_map>
 #include "framework.h"
 #include "RimeDictHelper2.h"
 
@@ -9,47 +11,59 @@
 #define ID_WORD 101
 #define ID_CODE 102
 #define ID_WEIGHT 103
+#define ID_CODE_BTN 115
 #define ID_ADD_BTN 112
 #define ID_SYNC_BTN 113
 #define ID_ADD_SYNC_BTN 114
+#define IDC_STATUSBAR 120
+#define WM_LOAD_DICT (WM_USER + 100)
+#define WM_LOAD_DICT_COMPLETE (WM_USER + 101)
 
 // Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-HWND hWord, hCode, hWeight, hParent;
+const wchar_t* CONFIG_FILE = L".\\config.ini";
+const wchar_t* CONFIG_SECTION = L"Settings";
+const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
+const wchar_t* CONFIG_KEY_DICT = L"DictPath";
+extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 HFONT g_hFont;
+HINSTANCE hInst;
+HWND hWord, hCode, hWeight, hParent, hStatusBar;
+std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
+WCHAR szTitle[MAX_LOADSTRING];
+WCHAR szWindowClass[MAX_LOADSTRING];
+WNDPROC g_oldWordProc = NULL, g_oldCodeProc = NULL, g_oldWeightProc = NULL;
 
-// 子类化需要的变量
-WNDPROC g_oldWordProc = NULL;
-WNDPROC g_oldCodeProc = NULL;
-WNDPROC g_oldWeightProc = NULL;
-
-// Forward declarations of functions included in this code module:
+// function claim:
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+bool LoadBaseDict(const std::wstring& filePath);
+DWORD WINAPI LoadDictThread(LPVOID lpParam);
 int add(HWND hWnd);
-void sync(HWND hWnd);
+INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+std::wstring GetCharCode(const std::wstring& character);
+std::wstring GetLongestCode(const std::wstring& codeField);
 void addAndSync(HWND hWnd);
-LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM); // 新增
+void getCode(HWND hWnd);
+void ParseDictLine(const wchar_t* line);
+void SetStatusText(HWND hWnd, const std::wstring& text);
+void sync(HWND hWnd);
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPWSTR    lpCmdLine,
-	_In_ int       nCmdShow) {
+std::wstring getConfigValue(LPCWSTR lpKeyName) {
+	wchar_t path[512] = { 0 };
+	GetPrivateProfileStringW(CONFIG_SECTION, lpKeyName, L"", path, 512, CONFIG_FILE);
+	return std::wstring(path);
+}
+
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	// TODO: Place code here.
-
-	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_RIMEDICTHELPER2, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
-	// Perform application initialization:
 	if (!InitInstance(hInstance, nCmdShow)) {
 		return FALSE;
 	}
@@ -69,11 +83,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance) {
 	WNDCLASSEXW wcex;
 
@@ -102,6 +111,9 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	else if (hWnd == hWeight) oldProc = g_oldWeightProc;
 
 	switch (message) {
+	case WM_COMMAND: {
+		break;
+	}
 	case WM_CHAR: {
 		wchar_t ch = (wchar_t)wParam;
 
@@ -174,7 +186,32 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		break;
 	}
 
-				// 额外处理：当失去焦点或用户粘贴时，验证内容
+
+	// ===== 新增：文本变化时自动生成编码 =====
+	case WM_KEYUP: {
+		if (hWnd == hWord) {
+			// 获取当前文本
+			wchar_t currentText[256];
+			GetWindowTextW(hWnd, currentText, 256);
+
+			// 只对词语输入框做自动补全
+			static std::wstring lastText;
+			std::wstring newText = currentText;
+
+			if (newText != lastText) {
+				lastText = newText;
+				// 自动生成编码
+				HWND hParent = GetParent(hWnd);
+				if (hParent) {
+					getCode(hParent);
+				}
+			}
+		}
+		break;
+	}
+
+
+	// 额外处理：当失去焦点或用户粘贴时，验证内容
 	case WM_KILLFOCUS: {
 		if (hWnd == hWeight) {
 			wchar_t text[256];
@@ -193,12 +230,21 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			}
 		}
 		break;
-	}	case WM_KEYDOWN: {
+	}
+
+	case WM_KEYDOWN: {
+		// ctrl+A
+		if (wParam == 'A' && (GetKeyState(VK_CONTROL) & 0x8000)) {
+			SendMessage(hWnd, EM_SETSEL, 0, -1);
+			return 0;
+		}
+		// enter
 		if (wParam == VK_RETURN) {
 			HWND hParent = GetParent(hWnd);
 			addAndSync(hParent);
 			return 0;
 		}
+		// tab
 		else if (wParam == VK_TAB) {
 			bool bShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 			HWND hNext = NULL;
@@ -230,39 +276,25 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
-// 回调函数
 BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 	SendMessage(hChild, WM_SETFONT, (WPARAM)lParam, TRUE);
 	return TRUE;
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hInst = hInstance; // Store instance handle in our global variable
 
 	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	int winWidth = 290;
-	int winHeight = 230;
+	int winHeight = 240;
 
-	// 黄金分割位置：宽度取 1/3，高度取 1/4（也可以调整）
 	int x = (screenWidth - winWidth) / 3;
 	int y = (screenHeight - winHeight) / 3;
 
 	HWND hWnd = CreateWindowW(szWindowClass, szTitle,
 		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		x, y, winWidth, winHeight, nullptr, nullptr, hInstance, nullptr);
-	//HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-		//CW_USEDEFAULT, CW_USEDEFAULT, 290, 230, nullptr, nullptr, hInstance, nullptr);
 
 	if (!hWnd) {
 		return FALSE;
@@ -274,19 +306,20 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
 	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, NULL, hInstance, NULL);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
+	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, NULL);
 	CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
 	CreateWindowW(L"Button", L"同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
 	CreateWindowW(L"Button", L"添加并同步", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
+	hStatusBar = CreateWindowW( STATUSCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR, hInstance, NULL);
 
 	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
 	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
+	SetWindowTextW(hWeight, L"20");
 
 	// 为编码输入框设置最大长度
 	SendMessage(hWord, EM_LIMITTEXT, 10, 0);
-	// 为编码输入框设置最大长度
 	SendMessage(hCode, EM_LIMITTEXT, 4, 0);
-	// 为权重输入框设置最大长度（3位足够，因为100是3位）
 	SendMessage(hWeight, EM_LIMITTEXT, 3, 0);
 	// 设置子类化（在创建所有编辑框之后）
 	g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
@@ -299,25 +332,61 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 
 	// 将焦点设置到词语输入框
 	SetFocus(hWord);
-	// 可选：全选已有内容（如果有的话），方便直接覆盖输入
+	// 全选已有内容（如果有的话）
 	SendMessage(hWord, EM_SETSEL, 0, -1);
+
+	PostMessage(hWnd, WM_LOAD_DICT, 0, 0);
+	//SetStatusText(hWnd, L"基本词库加载中……");
 
 	return TRUE;
 }
 
-// 配置文件路径
-const wchar_t* CONFIG_FILE = L".\\config.ini";
 
-// 读取配置
-std::wstring GetDictPath() {
-	wchar_t path[512] = { 0 };
-	GetPrivateProfileStringW(L"Settings", L"DictPath", L"", path, 512, CONFIG_FILE);
-	return std::wstring(path);
-}
 
-// 保存配置
-void SaveDictPath(const std::wstring& path) {
-	WritePrivateProfileStringW(L"Settings", L"DictPath", path.c_str(), CONFIG_FILE);
+void getCode(HWND hWnd) {
+	//GetCharCode
+	wchar_t word[256];
+	GetDlgItemTextW(hWnd, ID_WORD, word, 256);
+	if (wcslen(word) == 0) {
+		SetWindowTextW(hCode, L"");
+		return;
+	}
+	// 输入的词语
+	std::wstring wordsw(word);
+
+	// 词语转编码
+	std::wstring codesw;
+	size_t len = wordsw.length();
+	if (len == 1) {
+		codesw = GetCharCode(wordsw);
+	} else if (len == 2) {
+		std::wstring wordsw1 = wordsw.substr(0, 1);
+		std::wstring codesw1 = GetCharCode(wordsw1);
+		std::wstring wordsw2 = wordsw.substr(1, 1);
+		std::wstring codesw2 = GetCharCode(wordsw2);
+		codesw = codesw1.substr(0, 2) + codesw2.substr(0, 2);
+	} else if (len == 3) {
+		std::wstring wordsw1 = wordsw.substr(0, 1);
+		std::wstring codesw1 = GetCharCode(wordsw1);
+		std::wstring wordsw2 = wordsw.substr(1, 1);
+		std::wstring codesw2 = GetCharCode(wordsw2);
+		std::wstring wordsw3 = wordsw.substr(2, 1);
+		std::wstring codesw3 = GetCharCode(wordsw3);
+		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 2);
+	} else { // len >= 4
+		std::wstring wordsw1 = wordsw.substr(0, 1);
+		std::wstring codesw1 = GetCharCode(wordsw1);
+		std::wstring wordsw2 = wordsw.substr(1, 1);
+		std::wstring codesw2 = GetCharCode(wordsw2);
+		std::wstring wordsw3 = wordsw.substr(2, 1);
+		std::wstring codesw3 = GetCharCode(wordsw3);
+		std::wstring wordsw4 = wordsw.substr(len - 1, 1);
+		std::wstring codesw4 = GetCharCode(wordsw4);
+		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 1) + codesw4.substr(0, 1);
+	}  
+
+	// 显示编码
+	SetWindowTextW(hCode, codesw.c_str());
 }
 
 int add(HWND hWnd) {
@@ -344,7 +413,7 @@ int add(HWND hWnd) {
 	OutputDebugStringW(line);
 
 	// 获取词典文件路径
-	std::wstring dictPath = GetDictPath();
+	std::wstring dictPath = getConfigValue(CONFIG_KEY_DICT);
 	errno_t err;
 	FILE* fp = nullptr;
 	err = _wfopen_s(&fp, dictPath.c_str(), L"a, ccs=UTF-8");
@@ -381,7 +450,38 @@ void addAndSync(HWND hWnd) {
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
+	case WM_LOAD_DICT: {
+		OutputDebugStringW(L"开始异步加载基本词库...\n");
+		SetStatusText(hWnd, L"基本词库加载中...");
 
+		// 启动后台线程加载词库
+		HANDLE hThread = CreateThread( NULL, 0, LoadDictThread, hWnd, 0, NULL);
+
+		if (hThread) {
+			CloseHandle(hThread);  // 分离线程，让系统回收
+		}
+		else {
+			SetStatusText(hWnd, L"启动加载线程失败");
+		}
+		break;
+	}
+	case WM_LOAD_DICT_COMPLETE: {
+		bool success = (bool)wParam;
+		size_t dictSize = (size_t)lParam;
+
+		if (success) {
+			std::wstring msg = L"基本词库加载完成，共 " +
+				std::to_wstring(dictSize) + L" 个单字";
+			SetStatusText(hWnd, msg);
+			OutputDebugStringW((msg + L"\n").c_str());
+			getCode(hWnd);
+		}
+		else {
+			SetStatusText(hWnd, L"基本词库加载失败");
+			OutputDebugStringW(L"基本词库加载失败\n");
+		}
+		break;
+	}
 	case WM_CTLCOLORSTATIC: {
 		// 让静态文本背景透明
 		HDC hdcStatic = (HDC)wParam;
@@ -394,6 +494,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_COMMAND: {
 		int wmId = LOWORD(wParam);
 		switch (wmId) {
+		//case ID_CODE_BTN: {
+		//	getCode(hWnd);
+		//	break;
+		//}
 		case ID_ADD_BTN: {
 			add(hWnd);
 			break;
@@ -435,6 +539,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	return 0;
 }
+// ========== 后台线程加载词库 ==========
+DWORD WINAPI LoadDictThread(LPVOID lpParam) {
+	HWND hWnd = (HWND)lpParam;
+
+	OutputDebugStringW(L"后台线程开始加载词库...\n");
+
+	std::wstring baseDictPath = getConfigValue(CONFIG_KEY_BASE_DICT);
+	bool success = false;
+	size_t dictSize = 0;
+
+	if (!baseDictPath.empty()) {
+		success = LoadBaseDict(baseDictPath);
+		dictSize = g_charCodeMap.size();
+	}
+
+	// 通知主线程加载完成
+	PostMessage(hWnd, WM_LOAD_DICT_COMPLETE, (WPARAM)success, (LPARAM)dictSize);
+
+	return 0;
+}
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
 	UNREFERENCED_PARAMETER(lParam);
@@ -454,3 +578,169 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
 	return (INT_PTR)FALSE;
 }
 
+// 设置状态栏文本
+void SetStatusText(HWND hWnd, const std::wstring& text) {
+	HWND hStatusBar = GetDlgItem(hWnd, IDC_STATUSBAR);
+	if (hStatusBar) {
+		SendMessage(hStatusBar, SB_SETTEXT, 0, (LPARAM)text.c_str());
+	}
+}
+
+// ========== 获取最长编码 ==========
+std::wstring GetLongestCode(const std::wstring& codeField) {
+	std::wstring longestCode;
+	size_t start = 0;
+	size_t end = 0;
+
+	while (end < codeField.length()) {
+		// 查找 '/' 分隔符
+		end = codeField.find(L'/', start);
+		std::wstring code;
+
+		if (end == std::wstring::npos) {
+			// 最后一个编码段
+			code = codeField.substr(start);
+			start = codeField.length();
+		}
+		else {
+			code = codeField.substr(start, end - start);
+			start = end + 1;
+		}
+
+		// 更新最长编码
+		if (code.length() > longestCode.length()) {
+			longestCode = code;
+		}
+	}
+
+	return longestCode;
+}
+
+// ========== 解析单行 ==========
+void ParseDictLine(const wchar_t* line) {
+	// 按制表符分割
+	std::wstring str(line);
+	size_t tab1 = str.find(L'\t');
+	if (tab1 == std::wstring::npos) return;
+
+	size_t tab2 = str.find(L'\t', tab1 + 1);
+	std::wstring character = str.substr(0, tab1);
+	std::wstring codeField = str.substr(tab1 + 1, tab2 - tab1 - 1);
+
+	// 只处理单字（长度必须为1）
+	if (character.length() != 1) {
+		return;
+	}
+
+	// 提取最长编码
+	std::wstring longestCode = GetLongestCode(codeField);
+	if (longestCode.empty()) {
+		return;
+	}
+
+	// 存入 unordered_map
+	// 如果已存在且新编码更长，则更新
+	auto it = g_charCodeMap.find(character);
+	if (it == g_charCodeMap.end()) {
+		// 不存在，直接插入
+		g_charCodeMap.emplace(character, longestCode);
+		// 或 g_charCodeMap[character] = longestCode;
+	}
+	else if (longestCode.length() > it->second.length()) {
+		// 已存在但新编码更长，更新
+		it->second = longestCode;
+	}
+}
+
+// ========== 加载基本词库 ==========
+bool LoadBaseDict(const std::wstring& filePath) {
+	// 清空已有数据（释放内存）
+	g_charCodeMap.clear();
+	// 预留空间以减少 rehash 次数
+	g_charCodeMap.reserve(20000);  // 预估词库大小
+
+	// 打开文件（UTF-8 编码）
+	FILE* fp = nullptr;
+	errno_t err = _wfopen_s(&fp, filePath.c_str(), L"r, ccs=UTF-8");
+	if (err != 0 || fp == nullptr) {
+		OutputDebugStringW((L"无法打开基本词库文件：" + filePath + L"\n").c_str());
+		return false;
+	}
+
+	// 逐行读取
+	wchar_t line[1024];
+	bool foundMarker = false;   // 是否找到 "..." 标记
+	int lineCount = 0;
+	int charCount = 0;
+
+	while (fgetws(line, 1024, fp) != nullptr) {
+		lineCount++;
+
+		// 去掉行尾的换行符
+		size_t len = wcslen(line);
+		if (len > 0 && (line[len - 1] == L'\n' || line[len - 1] == L'\r')) {
+			line[len - 1] = L'\0';
+			len--;
+		}
+		if (len > 0 && line[len - 1] == L'\r') {
+			line[len - 1] = L'\0';
+			len--;
+		}
+
+		// 检查是否是标记行 "..." 
+		if (wcscmp(line, L"...") == 0) {
+			foundMarker = true;
+			OutputDebugStringW(L"找到标记行 '...'，开始解析词库...\n");
+			continue;
+		}
+
+		// 如果还没找到标记行，跳过
+		if (!foundMarker) {
+			continue;
+		}
+
+		// 跳过空行或注释行
+		if (line[0] == L'\0' || line[0] == L'#') {
+			continue;
+		}
+
+		// 解析字典行
+		ParseDictLine(line);
+		charCount++;
+
+		// 每1000行输出一次进度（调试用）
+		if (charCount % 1000 == 0) {
+			OutputDebugStringW((L"已解析 " + std::to_wstring(charCount) +
+				L" 行，当前词库大小 " +
+				std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
+		}
+	}
+
+	fclose(fp);
+
+	OutputDebugStringW((L"========================================\n"));
+	OutputDebugStringW((L"基本词库加载完成！\n"));
+	OutputDebugStringW((L"总行数: " + std::to_wstring(lineCount) + L"\n").c_str());
+	OutputDebugStringW((L"单字数: " + std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
+	OutputDebugStringW((L"========================================\n"));
+
+	return true;
+}
+
+// ========== 查询单字编码 ==========
+std::wstring GetCharCode(const std::wstring& character) {
+	auto it = g_charCodeMap.find(character);
+	if (it != g_charCodeMap.end()) {
+		return it->second;
+	}
+	return L"";  // 未找到
+}
+
+// ========== 获取词库统计信息（调试用） ==========
+size_t GetDictSize() {
+	return g_charCodeMap.size();
+}
+
+double GetLoadFactor() {
+	return g_charCodeMap.load_factor();
+}
