@@ -27,6 +27,7 @@ const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
 const wchar_t* CONFIG_KEY_USER_DICT = L"UserDictPath";
 const wchar_t* SCRIPT_NAME = L".\\after.bat";
 extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
+bool enableSync = TRUE;
 HFONT g_hFont;
 HINSTANCE hInst;
 HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, g_hWnd;
@@ -247,6 +248,9 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		}
 		// enter
 		if (wParam == VK_RETURN) {
+			if (!enableSync) {
+				return 0;
+			}
 			HWND hParent = GetParent(hWnd);
 			addAndSync(hParent);
 			return 0;
@@ -372,6 +376,7 @@ void UpdateSyncButtonState(HWND hWnd) {
 	HWND hBtnAddSync = GetDlgItem(hWnd, ID_ADD_SYNC_BTN);
 
 	// 启用或禁用按钮
+	enableSync = syncAvailable;
 	EnableWindow(hBtnSync, syncAvailable);
 	EnableWindow(hBtnAddSync, syncAvailable);
 }
@@ -462,6 +467,7 @@ void sync(HWND hWnd) {
 	}
 
 	// 禁用按钮，防止重复点击
+	enableSync = FALSE;
 	EnableWindow(hBtnSync, FALSE);
 	EnableWindow(hBtnAddSync, FALSE);
 	SetStatusText(hWnd, L"正在执行部署脚本...");
@@ -509,6 +515,7 @@ void sync(HWND hWnd) {
 	}
 	else {
 		MessageBoxW(hWnd, L"启动部署脚本失败！", L"错误", MB_OK | MB_ICONERROR);
+		enableSync = TRUE;
 		EnableWindow(hBtnSync, TRUE);
 		EnableWindow(hBtnAddSync, TRUE);
 		SetStatusText(hWnd, L"部署失败");
@@ -588,6 +595,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		DWORD exitCode = (DWORD)wParam;
 
 		// 恢复按钮状态
+		enableSync = TRUE;
 		EnableWindow(hBtnSync, TRUE);
 		EnableWindow(hBtnAddSync, TRUE);
 
