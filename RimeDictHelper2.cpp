@@ -3,7 +3,6 @@
 #define _UNICODE
 #include <windows.h>
 #include <string>
-#include <cstring>
 #include <commctrl.h>
 #include <unordered_map>
 #include "framework.h"
@@ -36,7 +35,7 @@ HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync,
 std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
-WNDPROC g_oldWordProc = NULL, g_oldCodeProc = NULL, g_oldWeightProc = NULL;
+WNDPROC g_oldWordProc = nullptr, g_oldCodeProc = nullptr, g_oldWeightProc = nullptr;
 
 // function claim:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -46,25 +45,21 @@ bool IsSyncScriptAvailable();
 bool LoadBaseDict(const std::wstring& filePath);
 DWORD WINAPI LoadDictThread(LPVOID lpParam);
 DWORD WINAPI WaitForScriptThread(LPVOID lpParam);
-int add(HWND hWnd);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 std::wstring GetCharCode(const std::wstring& character);
 std::wstring GetCharCode(wchar_t ch);
 std::wstring GetLongestCode(const std::wstring& codeField);
+int add(HWND hWnd);
+void sync(HWND hWnd);
 void addAndSync(HWND hWnd);
 void getCode(HWND hWnd);
 void ParseDictLine(const wchar_t* line);
 void SetStatusText(HWND hWnd, const std::wstring& text);
-void sync(HWND hWnd);
 void UpdateSyncButtonState(HWND hWnd);
-
-std::wstring getConfigValue(LPCWSTR lpKeyName) {
-	wchar_t path[512] = { 0 };
-	GetPrivateProfileStringW(CONFIG_SECTION, lpKeyName, L"", path, 512, CONFIG_FILE);
-	return std::wstring(path);
-}
+BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
+std::wstring getConfigValue(LPCWSTR lpKeyName);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
@@ -81,23 +76,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RIMEDICTHELPER2));
 
 	MSG msg;
-
-	// Main message loop:
 	while (GetMessage(&msg, nullptr, 0, 0)) {
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 	}
-
 	return (int)msg.wParam;
 }
 
+/**
+ * 注册窗口
+ * @param hInstance
+ * @return
+ */
 ATOM MyRegisterClass(HINSTANCE hInstance) {
 	WNDCLASSEXW wcex;
-
 	wcex.cbSize = sizeof(WNDCLASSEX);
-
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
@@ -109,13 +104,76 @@ ATOM MyRegisterClass(HINSTANCE hInstance) {
 	wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_RIMEDICTHELPER2);
 	wcex.lpszClassName = szWindowClass;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
 	return RegisterClassExW(&wcex);
+}
+
+/**
+ * init instance
+ * @param hInstance
+ * @param nCmdShow
+ * @return
+ */
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
+	hInst = hInstance; // Store instance handle in our global variable
+
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	int winWidth = 290;
+	int winHeight = 240;
+
+	int x = (screenWidth - winWidth) / 3;
+	int y = (screenHeight - winHeight) / 3;
+
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle,
+		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+		x, y, winWidth, winHeight, nullptr, nullptr, hInstance, nullptr);
+
+	if (!hWnd) {
+		return FALSE;
+	}
+
+	CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, nullptr, hInstance, nullptr);
+	hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD, hInstance, nullptr);
+	CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 50, 60, 25, hWnd, nullptr, hInstance, nullptr);
+	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, nullptr);
+	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, nullptr, hInstance, nullptr);
+	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, nullptr);
+	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, nullptr);
+	hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, nullptr);
+	hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, nullptr);
+	hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, nullptr);
+	hStatusBar = CreateWindowW( STATUSCLASSNAMEW, nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR, hInstance, nullptr);
+
+	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
+	SetWindowTextW(hWeight, L"20");
+	UpdateSyncButtonState(hWnd);
+
+	// 为编码输入框设置最大长度
+	SendMessage(hWord, EM_LIMITTEXT, 10, 0);
+	SendMessage(hCode, EM_LIMITTEXT, 4, 0);
+	SendMessage(hWeight, EM_LIMITTEXT, 3, 0);
+
+	// 设置子类化
+	g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+	g_oldCodeProc = (WNDPROC)SetWindowLongPtr(hCode, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+	g_oldWeightProc = (WNDPROC)SetWindowLongPtr(hWeight, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+	g_hWnd = hWnd;
+
+	SetFocus(hWord);
+	SendMessage(hWord, EM_SETSEL, 0, -1);
+	PostMessage(hWnd, WM_LOAD_DICT, 0, 0);
+
+	return TRUE;
 }
 
 // 编辑框的子类化窗口过程
 LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	WNDPROC oldProc = NULL;
+	WNDPROC oldProc = nullptr;
 	if (hWnd == hWord) oldProc = g_oldWordProc;
 	else if (hWnd == hCode) oldProc = g_oldCodeProc;
 	else if (hWnd == hWeight) oldProc = g_oldWeightProc;
@@ -260,7 +318,7 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		// tab
 		else if (wParam == VK_TAB) {
 			bool bShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-			HWND hNext = NULL;
+			HWND hNext = nullptr;
 
 			if (!bShift) {
 				if (hWnd == hWord) hNext = hCode;
@@ -291,68 +349,6 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 
 BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 	SendMessage(hChild, WM_SETFONT, (WPARAM)lParam, TRUE);
-	return TRUE;
-}
-
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
-	hInst = hInstance; // Store instance handle in our global variable
-
-	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-	int winWidth = 290;
-	int winHeight = 240;
-
-	int x = (screenWidth - winWidth) / 3;
-	int y = (screenHeight - winHeight) / 3;
-
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle,
-		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-		x, y, winWidth, winHeight, nullptr, nullptr, hInstance, nullptr);
-
-	if (!hWnd) {
-		return FALSE;
-	}
-
-	CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, NULL, hInstance, NULL);
-	hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 50, 60, 25, hWnd, NULL, hInstance, NULL);
-	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, NULL);
-	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, NULL, hInstance, NULL);
-	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, NULL);
-	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, NULL);
-	hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, NULL);
-	hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, NULL);
-	hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, NULL);
-	hStatusBar = CreateWindowW( STATUSCLASSNAMEW, NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR, hInstance, NULL);
-
-	g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-	EnumChildWindows(hWnd, SetChildFont, (LPARAM)g_hFont);
-	SetWindowTextW(hWeight, L"20");
-	UpdateSyncButtonState(hWnd);
-
-	// 为编码输入框设置最大长度
-	SendMessage(hWord, EM_LIMITTEXT, 10, 0);
-	SendMessage(hCode, EM_LIMITTEXT, 4, 0);
-	SendMessage(hWeight, EM_LIMITTEXT, 3, 0);
-	// 设置子类化（在创建所有编辑框之后）
-	g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-	g_oldCodeProc = (WNDPROC)SetWindowLongPtr(hCode, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-	g_oldWeightProc = (WNDPROC)SetWindowLongPtr(hWeight, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
-
-
-	ShowWindow(hWnd, nCmdShow);
-	UpdateWindow(hWnd);
-	g_hWnd = hWnd;
-
-	// 将焦点设置到词语输入框
-	SetFocus(hWord);
-	// 全选已有内容（如果有的话）
-	SendMessage(hWord, EM_SETSEL, 0, -1);
-
-	PostMessage(hWnd, WM_LOAD_DICT, 0, 0);
-	//SetStatusText(hWnd, L"基本词库加载中……");
-
 	return TRUE;
 }
 
@@ -429,7 +425,6 @@ int add(HWND hWnd) {
 
 	// 校验参数
 	if (wcslen(word) == 0 || wcslen(code) == 0) {
-		// MessageBoxW(hWnd, L"词语和编码不能为空！", L"提示", MB_OK | MB_ICONWARNING);
 		SetStatusText(hWnd, L"词语和编码不能为空！");
 		return -1;
 	}
@@ -462,8 +457,7 @@ int add(HWND hWnd) {
 	}
 }
 void sync(HWND hWnd) {
-//	ShellExecuteW(NULL, L"open", SCRIPT_NAME, NULL, NULL, SW_HIDE);
-	// 检查脚本是否存在
+	// 检查脚本是否存在。正常情况下不会不存在（不存在的话按钮会被禁用，无法调用此方法）
 	if (!IsSyncScriptAvailable()) {
 		MessageBoxW(hWnd, L"同步脚本不存在！", L"提示", MB_OK | MB_ICONWARNING);
 		UpdateSyncButtonState(hWnd);
@@ -488,22 +482,21 @@ void sync(HWND hWnd) {
 
 	// 创建进程
 	BOOL success = CreateProcessW(
-		NULL,
+		nullptr,
 		(LPWSTR)cmd.c_str(),
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		FALSE,
 		CREATE_NO_WINDOW,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		&si,
 		&pi
 	);
 
 	if (success) {
 		// 在后台线程中等待，完成后通知主线程
-		HANDLE hThread = CreateThread(NULL, 0, WaitForScriptThread,
-			(LPVOID)pi.hProcess, 0, NULL);
+		HANDLE hThread = CreateThread(nullptr, 0, WaitForScriptThread, (LPVOID)pi.hProcess, 0, nullptr);
 		if (hThread) {
 			CloseHandle(hThread);
 		}
@@ -549,14 +542,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_LOAD_DICT: {
 		OutputDebugString(L"开始异步加载基本词库...\n");
 		SetStatusText(hWnd, L"基本词库加载中...");
-
 		// 启动后台线程加载词库
-		HANDLE hThread = CreateThread( NULL, 0, LoadDictThread, hWnd, 0, NULL);
-
+		HANDLE hThread = CreateThread( nullptr, 0, LoadDictThread, hWnd, 0, nullptr);
 		if (hThread) {
 			CloseHandle(hThread);  // 分离线程，让系统回收
-		}
-		else {
+		} else {
 			SetStatusText(hWnd, L"启动加载线程失败");
 		}
 		break;
@@ -566,8 +556,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		size_t dictSize = (size_t)lParam;
 
 		if (success) {
-			std::wstring msg = L"基本词库加载完成，共 " +
-				std::to_wstring(dictSize) + L" 个单字";
+			std::wstring msg = L"基本词库加载完成，共 " + std::to_wstring(dictSize) + L" 个单字";
 			SetStatusText(hWnd, msg);
 			OutputDebugString((msg + L"\n").c_str());
 			getCode(hWnd);
@@ -588,12 +577,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 		if (exitCode == 0) {
 			SetStatusText(hWnd, L"部署完成");
-			//MessageBoxW(hWnd, L"部署完成！", L"提示", MB_OK | MB_ICONINFORMATION);
 		}
 		else {
-			std::wstring msg = L"部署失败，退出码: " + std::to_wstring(exitCode);
-			SetStatusText(hWnd, msg);
-			//MessageBoxW(hWnd, msg.c_str(), L"错误", MB_OK | MB_ICONERROR);
+			SetStatusText(hWnd, L"部署失败，退出码: " + std::to_wstring(exitCode));
 		}
 		break;
 	}
@@ -605,7 +591,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		// SetTextColor(hdcStatic, RGB(0, 0, 0));
 		return (LRESULT)GetStockObject(NULL_BRUSH);
 	}
-
 	case WM_COMMAND: {
 		int wmId = LOWORD(wParam);
 		switch (wmId) {
@@ -645,6 +630,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	case WM_DESTROY: {
 		OutputDebugString(L"call: WM_DESTROY\n");
+		if (g_hFont != nullptr) {
+			DeleteObject(g_hFont);
+			g_hFont = nullptr;
+		}
 		PostQuitMessage(0);
 		break;
 	}
@@ -657,40 +646,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 // ========== 后台线程加载词库 ==========
 DWORD WINAPI LoadDictThread(LPVOID lpParam) {
 	HWND hWnd = (HWND)lpParam;
-
 	OutputDebugString(L"后台线程开始加载词库...\n");
-
 	std::wstring baseDictPath = getConfigValue(CONFIG_KEY_BASE_DICT);
 	bool success = false;
 	size_t dictSize = 0;
-
 	if (!baseDictPath.empty()) {
 		success = LoadBaseDict(baseDictPath);
 		dictSize = g_charCodeMap.size();
 	}
-
 	// 通知主线程加载完成
 	PostMessage(hWnd, WM_LOAD_DICT_COMPLETE, (WPARAM)success, (LPARAM)dictSize);
-
 	return 0;
-}
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message) {
-	case WM_INITDIALOG: {
-		return (INT_PTR)TRUE;
-	}
-
-	case WM_COMMAND: {
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	}
-	return (INT_PTR)FALSE;
 }
 
 // ========== 获取最长编码 ==========
@@ -842,7 +808,6 @@ std::wstring GetCharCode(const std::wstring& character) {
 	}
 	return L"";  // 未找到
 }
-
 // reload
 std::wstring GetCharCode(wchar_t ch) {
 	std::wstring key(1, ch);
@@ -861,11 +826,26 @@ void SetStatusText(HWND hWnd, const std::wstring& text) {
 	}
 }
 
-// ========== 获取词库统计信息（调试用） ==========
-size_t GetDictSize() {
-	return g_charCodeMap.size();
+std::wstring getConfigValue(LPCWSTR lpKeyName) {
+	wchar_t path[512] = { 0 };
+	GetPrivateProfileStringW(CONFIG_SECTION, lpKeyName, L"", path, 512, CONFIG_FILE);
+	return std::wstring(path);
 }
+// Message handler for about box.
+INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message) {
+	case WM_INITDIALOG: {
+		return (INT_PTR)TRUE;
+	}
 
-double GetLoadFactor() {
-	return g_charCodeMap.load_factor();
+	case WM_COMMAND: {
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	}
+	return (INT_PTR)FALSE;
 }
