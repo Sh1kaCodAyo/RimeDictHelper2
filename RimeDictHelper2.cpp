@@ -27,7 +27,6 @@ const wchar_t* CONFIG_SECTION = L"Settings";
 const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
 const wchar_t* CONFIG_KEY_USER_DICT = L"UserDictPath";
 const wchar_t* SCRIPT_NAME = L".\\after.bat";
-extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 bool enableSync = TRUE;
 HFONT g_hFont;
 HINSTANCE hInst;
@@ -38,28 +37,28 @@ WCHAR szWindowClass[MAX_LOADSTRING];
 WNDPROC g_oldWordProc = nullptr, g_oldCodeProc = nullptr, g_oldWeightProc = nullptr;
 
 // function declare:
-ATOM MyRegisterClass(HINSTANCE hInstance);
-BOOL InitInstance(HINSTANCE, int);
-bool FileExists(const std::wstring& filePath);
-bool IsSyncScriptAvailable();
-bool LoadBaseDict(const std::wstring& filePath);
-DWORD WINAPI LoadDictThread(LPVOID lpParam);
-DWORD WINAPI WaitForScriptThread(LPVOID lpParam);
-INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-std::wstring GetCharCode(const std::wstring& character);
-std::wstring GetCharCode(wchar_t ch);
-std::wstring GetLongestCode(const std::wstring& codeField);
-int add(HWND hWnd);
-void sync(HWND hWnd);
-void addAndSync(HWND hWnd);
-void getCode(HWND hWnd);
-void ParseDictLine(const wchar_t* line);
-void SetStatusText(HWND hWnd, const std::wstring& text);
-void UpdateSyncButtonState(HWND hWnd);
-BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
-std::wstring getConfigValue(LPCWSTR lpKeyName);
+extern ATOM MyRegisterClass(HINSTANCE hInstance);
+extern BOOL InitInstance(HINSTANCE, int);
+extern bool FileExists(const std::wstring& filePath);
+extern bool IsSyncScriptAvailable();
+extern bool LoadBaseDict(const std::wstring& filePath);
+extern DWORD WINAPI LoadDictThread(LPVOID lpParam);
+extern DWORD WINAPI WaitForScriptThread(LPVOID lpParam);
+extern INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+extern LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
+extern LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+extern std::wstring GetCharCode(const std::wstring& character);
+extern std::wstring GetCharCode(wchar_t ch);
+extern std::wstring GetLongestCode(const std::wstring& codeField);
+extern int add(HWND hWnd);
+extern void sync(HWND hWnd);
+extern void addAndSync(HWND hWnd);
+extern void getCode(HWND hWnd);
+extern void ParseDictLine(const wchar_t* line);
+extern void SetStatusText(HWND hWnd, const std::wstring& text);
+extern void UpdateSyncButtonState(HWND hWnd);
+extern BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
+extern std::wstring getConfigValue(LPCWSTR lpKeyName);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
@@ -138,7 +137,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE, hInstance, nullptr);
 	CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, nullptr, hInstance, nullptr);
 	hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT, hInstance, nullptr);
-	//CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, nullptr);
+	// CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, nullptr);
 	hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd, (HMENU)ID_ADD_BTN, hInstance, nullptr);
 	hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd, (HMENU)ID_SYNC_BTN, hInstance, nullptr);
 	hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd, (HMENU)ID_ADD_SYNC_BTN, hInstance, nullptr);
@@ -171,12 +170,23 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	return TRUE;
 }
 
-// 编辑框的子类化窗口过程
+/**
+ * 重写编辑框对事件的响应行为
+ * @param hWnd
+ * @param message
+ * @param wParam
+ * @param lParam
+ * @return
+ */
 LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	WNDPROC oldProc = nullptr;
-	if (hWnd == hWord) oldProc = g_oldWordProc;
-	else if (hWnd == hCode) oldProc = g_oldCodeProc;
-	else if (hWnd == hWeight) oldProc = g_oldWeightProc;
+	if (hWnd == hWord) {
+		oldProc = g_oldWordProc;
+	} else if (hWnd == hCode) {
+		oldProc = g_oldCodeProc;
+	} else if (hWnd == hWeight) {
+		oldProc = g_oldWeightProc;
+	}
 
 	switch (message) {
 	case WM_COMMAND: {
@@ -339,9 +349,11 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		}
 		break;
 	}
+	default:
+		break;
 	}
 
-	if (oldProc) {
+	if (oldProc != nullptr) {
 		return CallWindowProc(oldProc, hWnd, message, wParam, lParam);
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
@@ -355,13 +367,12 @@ BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 // ========== 检测文件是否存在 ==========
 bool FileExists(const std::wstring& filePath) {
 	DWORD attrs = GetFileAttributesW(filePath.c_str());
-	return (attrs != INVALID_FILE_ATTRIBUTES &&
-		!(attrs & FILE_ATTRIBUTE_DIRECTORY));
+	return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 // ========== 检测同步脚本是否存在 ==========
 bool IsSyncScriptAvailable() {
-	// 默认检测当前目录下的 sync.bat
+	// 默认检测当前目录下的 after.bat
 	return FileExists(SCRIPT_NAME);
 }
 
@@ -379,6 +390,10 @@ void UpdateSyncButtonState(HWND hWnd) {
 	EnableWindow(hBtnAddSync, syncAvailable);
 }
 
+/**
+ * 自动生成词组编码
+ * @param hWnd
+ */
 void getCode(HWND hWnd) {
 	//GetCharCode
 	wchar_t word[256];
