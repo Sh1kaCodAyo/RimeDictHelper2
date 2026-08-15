@@ -82,7 +82,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
     }
 
-    CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, nullptr, hInstance, nullptr);
+    CreateWindowW(L"STATIC", L"词条", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, nullptr, hInstance, nullptr);
     hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD,
                           hInstance, nullptr);
     CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 60, 60, 25, hWnd, nullptr, hInstance, nullptr);
