@@ -3,4 +3,5 @@
 echo Bat file executed successfully!
 echo Current time: %date% %time%
 echo Current directory: %cd%
-pause
+REM pause
+timeout /t 2
