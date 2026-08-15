@@ -3,7 +3,7 @@
 //
 #define UNICODE
 #define _UNICODE
-#include "Dict.h"
+#include "DictAdapter.h"
 
 // ========== 加载基本词库 ==========
 bool LoadBaseDict(const std::wstring& filePath) {
@@ -158,4 +158,21 @@ std::wstring GetLongestCode(const std::wstring& codeField) {
 	}
 
 	return longestCode;
+}
+// ========== 查询单字编码 ==========
+std::wstring GetCharCode(const std::wstring& character) {
+	auto it = g_charCodeMap.find(character);
+	if (it != g_charCodeMap.end()) {
+		return it->second;
+	}
+	return L"";  // 未找到
+}
+// reload
+std::wstring GetCharCode(wchar_t ch) {
+	std::wstring key(1, ch);
+	auto it = g_charCodeMap.find(key);
+	if (it != g_charCodeMap.end()) {
+		return it->second;
+	}
+	return L"";
 }

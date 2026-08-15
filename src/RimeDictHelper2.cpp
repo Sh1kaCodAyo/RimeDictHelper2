@@ -309,17 +309,6 @@ BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam) {
 	return TRUE;
 }
 
-// ========== 检测文件是否存在 ==========
-bool FileExists(const std::wstring& filePath) {
-	DWORD attrs = GetFileAttributesW(filePath.c_str());
-	return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
-}
-
-// ========== 检测同步脚本是否存在 ==========
-bool IsSyncScriptAvailable() {
-	// 默认检测当前目录下的 after.bat
-	return FileExists(SCRIPT_NAME);
-}
 
 // ========== 更新同步按钮状态 ==========
 void UpdateSyncButtonState(HWND hWnd) {
@@ -478,24 +467,6 @@ void addAndSync(HWND hWnd) {
 	}
 }
 
-// 等待脚本完成的线程
-DWORD WINAPI WaitForScriptThread(LPVOID lpParam) {
-	HANDLE hProcess = (HANDLE)lpParam;
-
-	// 等待进程结束
-	DWORD waitResult = WaitForSingleObject(hProcess, INFINITE);
-
-	// 获取退出码
-	DWORD exitCode = 0;
-	GetExitCodeProcess(hProcess, &exitCode);
-
-	CloseHandle(hProcess);
-
-	// 通知主线程
-	PostMessage(g_hWnd, WM_SCRIPT_COMPLETE, (WPARAM)exitCode, 0);
-
-	return 0;
-}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
@@ -606,23 +577,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 
 
-// ========== 查询单字编码 ==========
-std::wstring GetCharCode(const std::wstring& character) {
-	auto it = g_charCodeMap.find(character);
-	if (it != g_charCodeMap.end()) {
-		return it->second;
-	}
-	return L"";  // 未找到
-}
-// reload
-std::wstring GetCharCode(wchar_t ch) {
-	std::wstring key(1, ch);
-	auto it = g_charCodeMap.find(key);
-	if (it != g_charCodeMap.end()) {
-		return it->second;
-	}
-	return L"";
-}
 
 // 设置状态栏文本
 void SetStatusText(HWND hWnd, const std::wstring& text) {
