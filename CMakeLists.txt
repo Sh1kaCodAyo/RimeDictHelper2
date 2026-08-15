@@ -19,8 +19,11 @@ if (MSVC)
 endif ()
 
 add_executable(RimeDictHelper2 WIN32
-        src/RimeDictHelper2.cpp
         resource/RimeDictHelper2.rc
+        src/RimeDictHelper2.h
+        src/RimeDictHelper2.cpp
+        src/GlobalVariables.h
+        src/GlobalVariables.cpp
 )
 
 # 复制依赖文件到构建目录

@@ -1,65 +1,10 @@
-﻿#pragma once
-#define UNICODE
+﻿#define UNICODE
 #define _UNICODE
-#include <windows.h>
-#include <string>
-#include <commctrl.h>
-#include <unordered_map>
-#include "framework.h"
 #include "RimeDictHelper2.h"
 
-#define MAX_LOADSTRING 100
-#define ID_WORD 101
-#define ID_CODE 102
-#define ID_WEIGHT 103
-#define ID_CODE_BTN 115
-#define ID_ADD_BTN 112
-#define ID_SYNC_BTN 113
-#define ID_ADD_SYNC_BTN 114
-#define IDC_STATUSBAR 120
-#define WM_LOAD_DICT (WM_USER + 100)
-#define WM_LOAD_DICT_COMPLETE (WM_USER + 101)
-#define WM_SCRIPT_COMPLETE (WM_USER + 102)
-
 // Global Variables:
-const wchar_t* CONFIG_FILE = L".\\config.ini";
-const wchar_t* CONFIG_SECTION = L"Settings";
-const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
-const wchar_t* CONFIG_KEY_USER_DICT = L"UserDictPath";
-const wchar_t* SCRIPT_NAME = L".\\after.bat";
-bool enableSync = TRUE;
-HFONT g_hFont;
-HINSTANCE hInst;
-HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, g_hWnd;
-std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
-WCHAR szTitle[MAX_LOADSTRING];
-WCHAR szWindowClass[MAX_LOADSTRING];
-WNDPROC g_oldWordProc = nullptr, g_oldCodeProc = nullptr, g_oldWeightProc = nullptr;
 
 // function declare:
-extern ATOM MyRegisterClass(HINSTANCE hInstance);
-extern BOOL InitInstance(HINSTANCE, int);
-extern bool FileExists(const std::wstring& filePath);
-extern bool IsSyncScriptAvailable();
-extern bool LoadBaseDict(const std::wstring& filePath);
-extern DWORD WINAPI LoadDictThread(LPVOID lpParam);
-extern DWORD WINAPI WaitForScriptThread(LPVOID lpParam);
-extern INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
-extern LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
-extern LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-extern std::wstring GetCharCode(const std::wstring& character);
-extern std::wstring GetCharCode(wchar_t ch);
-extern std::wstring GetLongestCode(const std::wstring& codeField);
-extern int add(HWND hWnd);
-extern void sync(HWND hWnd);
-extern void addAndSync(HWND hWnd);
-extern void getCode(HWND hWnd);
-extern void ParseDictLine(const wchar_t* line);
-extern void SetStatusText(HWND hWnd, const std::wstring& text);
-extern void UpdateSyncButtonState(HWND hWnd);
-extern BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
-extern std::wstring getConfigValue(LPCWSTR lpKeyName);
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
