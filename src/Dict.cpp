@@ -1,0 +1,161 @@
+//
+// Created by Ftwrjh on 2026/8/15.
+//
+#define UNICODE
+#define _UNICODE
+#include "Dict.h"
+
+// ========== 加载基本词库 ==========
+bool LoadBaseDict(const std::wstring& filePath) {
+    // 清空已有数据（释放内存）
+    g_charCodeMap.clear();
+    // 预留空间以减少 rehash 次数
+    g_charCodeMap.reserve(20000);  // 预估词库大小
+
+    // 打开文件（UTF-8 编码）
+    FILE* fp = nullptr;
+    errno_t err = _wfopen_s(&fp, filePath.c_str(), L"r, ccs=UTF-8");
+    if (err != 0 || fp == nullptr) {
+        OutputDebugString((L"无法打开基本词库文件：" + filePath + L"\n").c_str());
+        return false;
+    }
+
+    // 逐行读取
+    wchar_t line[1024];
+    bool foundMarker = false;   // 是否找到 "..." 标记
+    int lineCount = 0;
+    int charCount = 0;
+
+    while (fgetws(line, 1024, fp) != nullptr) {
+        lineCount++;
+
+        // 去掉行尾的换行符
+        size_t len = wcslen(line);
+        if (len > 0 && (line[len - 1] == L'\n' || line[len - 1] == L'\r')) {
+            line[len - 1] = L'\0';
+            len--;
+        }
+        if (len > 0 && line[len - 1] == L'\r') {
+            line[len - 1] = L'\0';
+            len--;
+        }
+
+        // 检查是否是标记行 "..."
+        if (wcscmp(line, L"...") == 0) {
+            foundMarker = true;
+            OutputDebugString(L"找到标记行 '...'，开始解析词库...\n");
+            continue;
+        }
+
+        // 如果还没找到标记行，跳过
+        if (!foundMarker) {
+            continue;
+        }
+
+        // 跳过空行或注释行
+        if (line[0] == L'\0' || line[0] == L'#') {
+            continue;
+        }
+
+        // 解析字典行
+        ParseDictLine(line);
+        charCount++;
+
+        // 每1000行输出一次进度（调试用）
+        if (charCount % 1000 == 0) {
+            OutputDebugString((L"已解析 " + std::to_wstring(charCount) +
+                L" 行，当前词库大小 " +
+                std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
+        }
+    }
+
+    fclose(fp);
+
+    OutputDebugString((L"========================================\n"));
+    OutputDebugString((L"基本词库加载完成！\n"));
+    OutputDebugString((L"总行数: " + std::to_wstring(lineCount) + L"\n").c_str());
+    OutputDebugString((L"单字数: " + std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
+    OutputDebugString((L"========================================\n"));
+
+    return true;
+}
+// ========== 后台线程加载词库 ==========
+DWORD WINAPI LoadDictThread(LPVOID lpParam) {
+    HWND hWnd = (HWND)lpParam;
+    OutputDebugString(L"后台线程开始加载词库...\n");
+    std::wstring baseDictPath = getConfigValue(CONFIG_KEY_BASE_DICT);
+    bool success = false;
+    size_t dictSize = 0;
+    if (!baseDictPath.empty()) {
+        success = LoadBaseDict(baseDictPath);
+        dictSize = g_charCodeMap.size();
+    }
+    // 通知主线程加载完成
+    PostMessage(hWnd, WM_LOAD_DICT_COMPLETE, (WPARAM)success, (LPARAM)dictSize);
+    return 0;
+}
+
+// ========== 解析单行 ==========
+void ParseDictLine(const wchar_t* line) {
+    // 按制表符分割
+    std::wstring str(line);
+    size_t tab1 = str.find(L'\t');
+    if (tab1 == std::wstring::npos) return;
+
+    size_t tab2 = str.find(L'\t', tab1 + 1);
+    std::wstring character = str.substr(0, tab1);
+    std::wstring codeField = str.substr(tab1 + 1, tab2 - tab1 - 1);
+
+    // 只处理单字（长度必须为1）
+    if (character.length() != 1) {
+        return;
+    }
+
+    // 提取最长编码
+    std::wstring longestCode = GetLongestCode(codeField);
+    if (longestCode.empty()) {
+        return;
+    }
+
+    // 存入 unordered_map
+    // 如果已存在且新编码更长，则更新
+    auto it = g_charCodeMap.find(character);
+    if (it == g_charCodeMap.end()) {
+        // 不存在，直接插入
+        g_charCodeMap.emplace(character, longestCode);
+        // 或 g_charCodeMap[character] = longestCode;
+    }
+    else if (longestCode.length() > it->second.length()) {
+        // 已存在但新编码更长，更新
+        it->second = longestCode;
+    }
+}
+// ========== 获取最长编码 ==========
+std::wstring GetLongestCode(const std::wstring& codeField) {
+	std::wstring longestCode;
+	size_t start = 0;
+	size_t end = 0;
+
+	while (end < codeField.length()) {
+		// 查找 '/' 分隔符
+		end = codeField.find(L'/', start);
+		std::wstring code;
+
+		if (end == std::wstring::npos) {
+			// 最后一个编码段
+			code = codeField.substr(start);
+			start = codeField.length();
+		}
+		else {
+			code = codeField.substr(start, end - start);
+			start = end + 1;
+		}
+
+		// 更新最长编码
+		if (code.length() > longestCode.length()) {
+			longestCode = code;
+		}
+	}
+
+	return longestCode;
+}
