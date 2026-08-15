@@ -24,12 +24,16 @@ add_executable(RimeDictHelper2 WIN32
         src/RimeDictHelper2.cpp
         src/GlobalVariables.h
         src/GlobalVariables.cpp
+        src/DictTypes.h
+        src/DictTypes.cpp
         src/DictAdapter.h
         src/DictAdapter.cpp
-        src/ConfigAdapter.cpp
         src/ConfigAdapter.h
-        src/ScriptAdapter.cpp
+        src/ConfigAdapter.cpp
         src/ScriptAdapter.h
+        src/ScriptAdapter.cpp
+        src/Function.h
+        src/Function.cpp
 )
 
 # 复制依赖文件到构建目录

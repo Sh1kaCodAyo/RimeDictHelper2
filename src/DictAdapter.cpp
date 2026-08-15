@@ -176,3 +176,43 @@ std::wstring GetCharCode(wchar_t ch) {
 	}
 	return L"";
 }
+/**
+ * 自动生成词组编码
+ * @param hWnd
+ */
+void getCode(HWND hWnd) {
+	//GetCharCode
+	wchar_t word[256];
+	GetDlgItemTextW(hWnd, ID_WORD, word, 256);
+	if (wcslen(word) == 0) {
+		SetWindowTextW(hCode, L"");
+		return;
+	}
+	// 输入的词语
+	std::wstring wordsw(word);
+
+	// 词语转编码
+	std::wstring codesw;
+	size_t len = wordsw.length();
+	if (len == 1) {
+		codesw = GetCharCode(wordsw);
+	} else if (len == 2) {
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
+		codesw = codesw1.substr(0, 2) + codesw2.substr(0, 2);
+	} else if (len == 3) {
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
+		std::wstring codesw3 = GetCharCode(wordsw[2]);
+		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 2);
+	} else { // len >= 4
+		std::wstring codesw1 = GetCharCode(wordsw[0]);
+		std::wstring codesw2 = GetCharCode(wordsw[1]);
+		std::wstring codesw3 = GetCharCode(wordsw[2]);
+		std::wstring codesw4 = GetCharCode(wordsw[len - 1]);
+		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 1) + codesw4.substr(0, 1);
+	}
+
+	// 显示编码
+	SetWindowTextW(hCode, codesw.c_str());
+}

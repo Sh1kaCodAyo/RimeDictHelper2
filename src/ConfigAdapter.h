@@ -1,4 +1,5 @@
 //
+// 配置文件功能
 // Created by Ftwrjh on 2026/8/15.
 //
 #pragma once
