@@ -19,14 +19,10 @@ if (MSVC)
 endif ()
 
 add_executable(RimeDictHelper2 WIN32
-        RimeDictHelper2.cpp
-        RimeDictHelper2.rc
+        src/RimeDictHelper2.cpp
+        resource/RimeDictHelper2.rc
 )
 
-# 可选：自动复制 config.ini
-#file(COPY ${CMAKE_SOURCE_DIR}/config.ini DESTINATION ${CMAKE_BINARY_DIR})
 # 复制依赖文件到构建目录
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    file(COPY ${CMAKE_SOURCE_DIR}/config.ini DESTINATION ${CMAKE_BINARY_DIR})
-    file(COPY ${CMAKE_SOURCE_DIR}/after.bat DESTINATION ${CMAKE_BINARY_DIR})
-endif ()
+file(COPY ${CMAKE_SOURCE_DIR}/resource/config.ini DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/resource/after.bat DESTINATION ${CMAKE_BINARY_DIR})

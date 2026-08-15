@@ -45,7 +45,7 @@ RimeDictHelper2
 
 ### 5.1. config.ini
 
-`config.ini`文件中需要配置如下内容：
+`resource/config.ini`文件中需要配置如下内容：
 
 ```ini
 [Settings]
