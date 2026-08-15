@@ -1,7 +1,7 @@
 ![RimeDictHelper2.ico](resource/RimeDictHelper2.ico)
 # RimeDictHelper2
 
-用于管理Rime输入法词库的小工具，基于c++实现。功能简单，受众小众。主要自用，顺便分享，有缘遇到可自取。
+用于管理Rime输入法词库的小工具。功能简单，受众小众。主要自用，顺便分享，有缘人遇到可按需自取。
 
 ## 1. 简介
 
