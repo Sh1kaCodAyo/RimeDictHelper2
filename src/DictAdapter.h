@@ -19,3 +19,4 @@ bool LoadDictFile(const std::wstring& filePath, int source);
 void LoadAllDicts();
 int CountDuplicatesForCode(const std::wstring& code);
 int CountAllDuplicates();
+void UpdateConflictList(HWND hListView, const std::wstring& code);

@@ -67,8 +67,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    int winWidth = 290;
-    int winHeight = 240;
+    int winWidth = 600;
+    int winHeight = 300;
 
     int x = (screenWidth - winWidth) / 3;
     int y = (screenHeight - winHeight) / 3;
@@ -85,21 +85,39 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     CreateWindowW(L"STATIC", L"词语", WS_CHILD | WS_VISIBLE, 30, 20, 60, 25, hWnd, nullptr, hInstance, nullptr);
     hWord = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 20, 150, 25, hWnd, (HMENU)ID_WORD,
                           hInstance, nullptr);
-    CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 50, 60, 25, hWnd, nullptr, hInstance, nullptr);
-    hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 50, 150, 25, hWnd, (HMENU)ID_CODE,
+    CreateWindowW(L"STATIC", L"编码", WS_CHILD | WS_VISIBLE, 30, 60, 60, 25, hWnd, nullptr, hInstance, nullptr);
+    hCode = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 60, 150, 25, hWnd, (HMENU)ID_CODE,
                           hInstance, nullptr);
-    CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 80, 60, 25, hWnd, nullptr, hInstance, nullptr);
-    hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 80, 150, 25, hWnd, (HMENU)ID_WEIGHT,
+    CreateWindowW(L"STATIC", L"权重", WS_CHILD | WS_VISIBLE, 30, 100, 60, 25, hWnd, nullptr, hInstance, nullptr);
+    hWeight = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 100, 100, 150, 25, hWnd, (HMENU)ID_WEIGHT,
                             hInstance, nullptr);
     // CreateWindowW(L"Button", L"查询编码", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 100, 50, 25, hWnd, (HMENU)ID_CODE_BTN, hInstance, nullptr);
-    hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 120, 50, 25, hWnd,
+    hBtnAdd = CreateWindowW(L"Button", L"添加", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 20, 160, 50, 25, hWnd,
                             (HMENU)ID_ADD_BTN, hInstance, nullptr);
-    hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 120, 50, 25, hWnd,
+    hBtnSync = CreateWindowW(L"Button", L"部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 90, 160, 50, 25, hWnd,
                              (HMENU)ID_SYNC_BTN, hInstance, nullptr);
-    hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 120, 100, 25, hWnd,
+    hBtnAddSync = CreateWindowW(L"Button", L"添加并部署", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 160, 160, 100, 25, hWnd,
                                 (HMENU)ID_ADD_SYNC_BTN, hInstance, nullptr);
     hStatusBar = CreateWindowW(STATUSCLASSNAMEW, nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hWnd, (HMENU)IDC_STATUSBAR,
                                hInstance, nullptr);
+    hListView = CreateWindowW(WC_LISTVIEWW, L"", WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_SINGLESEL,
+                                   310, 20, 250, 160, hWnd, (HMENU)ID_LISTVIEW, hInstance, nullptr);
+
+    // 添加列
+    LVCOLUMNW col = {0};
+    col.mask = LVCF_TEXT | LVCF_WIDTH;
+    col.cx = 50; // 编码列宽
+    col.pszText = LPWSTR(L"编码");
+    ListView_InsertColumn(hListView, 0, &col);
+    col.cx = 80; // 词条列宽
+    col.pszText = LPWSTR(L"词条");
+    ListView_InsertColumn(hListView, 1, &col);
+    col.cx = 50; // 权重列宽
+    col.pszText = LPWSTR(L"权重");
+    ListView_InsertColumn(hListView, 2, &col);
+    col.cx = 70; // 来源列宽
+    col.pszText = LPWSTR(L"来源");
+    ListView_InsertColumn(hListView, 3, &col);
 
     g_hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                          CLIP_DEFAULT_PRECIS,

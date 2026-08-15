@@ -12,7 +12,7 @@ const wchar_t* SCRIPT_NAME = L".\\after.bat";
 bool enableSync = TRUE;
 HFONT g_hFont;
 HINSTANCE hInst;
-HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, g_hWnd;
+HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, hListView, g_hWnd;
 std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];

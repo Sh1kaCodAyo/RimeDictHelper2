@@ -221,6 +221,7 @@ void getCode(HWND hWnd)
         SetWindowTextW(hCode, L"");
         // SetStatusText(hWnd, L"等待输入词语");
         SetStatusText(hWnd, defaultMsg);
+        ListView_DeleteAllItems(hListView);
         return;
     }
     // 输入的词语
@@ -255,7 +256,7 @@ void getCode(HWND hWnd)
         std::wstring codesw4 = GetCharCode(wordsw[len - 1]);
         codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 1) + codesw4.substr(0, 1);
     }
-
+    UpdateConflictList(hListView, codesw);
     int count = CountDuplicatesForCode(codesw);
     if (count == 0)
     {
@@ -349,4 +350,32 @@ int CountAllDuplicates()
         }
     }
     return duplicateCount;
+}
+
+void UpdateConflictList(HWND hListView, const std::wstring& code) {
+    ListView_DeleteAllItems(hListView);
+
+    auto it = g_codeToEntries.find(code);
+    if (it == g_codeToEntries.end()) return;
+
+    int index = 0;
+    for (const auto& entry : it->second) {
+        LVITEMW item = {0};
+        item.mask = LVIF_TEXT;
+        item.iItem = index;
+        item.pszText = (LPWSTR)entry.text.c_str();
+        ListView_InsertItem(hListView, &item);
+
+        // 设置子项（编码、权重、来源）
+        ListView_SetItemText(hListView, index, 0, (LPWSTR)code.c_str());
+        ListView_SetItemText(hListView, index, 1, (LPWSTR)entry.text.c_str());
+
+        std::wstring weightStr = std::to_wstring(entry.weight);
+        ListView_SetItemText(hListView, index, 2, (LPWSTR)weightStr.c_str());
+
+        std::wstring sourceStr = (entry.source == 0) ? L"基本" : L"用户";
+        ListView_SetItemText(hListView, index, 3, (LPWSTR)sourceStr.c_str());
+
+        index++;
+    }
 }
