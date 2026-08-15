@@ -90,6 +90,7 @@ DWORD WINAPI LoadDictThread(LPVOID lpParam) {
         success = LoadBaseDict(baseDictPath);
         dictSize = g_charCodeMap.size();
     }
+	LoadAllDicts();
     // 通知主线程加载完成
     PostMessage(hWnd, WM_LOAD_DICT_COMPLETE, (WPARAM)success, (LPARAM)dictSize);
     return 0;
@@ -186,6 +187,8 @@ void getCode(HWND hWnd) {
 	GetDlgItemTextW(hWnd, ID_WORD, word, 256);
 	if (wcslen(word) == 0) {
 		SetWindowTextW(hCode, L"");
+		// SetStatusText(hWnd, L"等待输入词语");
+		SetStatusText(hWnd, defaultMsg);
 		return;
 	}
 	// 输入的词语
@@ -213,6 +216,83 @@ void getCode(HWND hWnd) {
 		codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) + codesw3.substr(0, 1) + codesw4.substr(0, 1);
 	}
 
+	int count = CountDuplicatesForCode(codesw);
+	if (count == 0) {
+		SetStatusText(hWnd, L"当前编码无重码");
+	} else {
+		SetStatusText(hWnd, (L"当前编码有 " + std::to_wstring(count) + L" 个词条").c_str());
+	}
+
 	// 显示编码
 	SetWindowTextW(hCode, codesw.c_str());
+}
+
+// 加载词库文件（通用）
+bool LoadDictFile(const std::wstring& filePath, int source) {
+	FILE* fp = nullptr;
+	errno_t err = _wfopen_s(&fp, filePath.c_str(), L"r, ccs=UTF-8");
+	if (err != 0 || fp == nullptr) {
+		return false;
+	}
+
+	wchar_t line[1024];
+	bool foundMarker = false;
+
+	while (fgetws(line, 1024, fp) != nullptr) {
+		// 去掉行尾换行符（省略，参考 LoadBaseDict 中的处理）
+		// 跳过空行、注释行、YAML头部、非单字等（省略）
+
+		std::wstring str(line);
+		size_t tab1 = str.find(L'\t');
+		if (tab1 == std::wstring::npos) continue;
+		size_t tab2 = str.find(L'\t', tab1 + 1);
+		if (tab2 == std::wstring::npos) continue;
+
+		std::wstring text = str.substr(0, tab1);
+		std::wstring code = str.substr(tab1 + 1, tab2 - tab1 - 1);
+		int weight = _wtoi(str.substr(tab2 + 1).c_str());
+
+		// 存入索引（保留所有词条，不限于单字）
+		g_codeToEntries[code].push_back({text, weight, source});
+	}
+
+	fclose(fp);
+	return true;
+}
+
+// 加载所有词库（在程序启动时调用）
+void LoadAllDicts() {
+	g_codeToEntries.clear();
+
+	// 加载基本词库
+	std::wstring basePath = getConfigValue(CONFIG_KEY_BASE_DICT);
+	if (!basePath.empty()) {
+		LoadDictFile(basePath, 0);
+	}
+
+	// 加载用户词库
+	std::wstring userPath = getConfigValue(CONFIG_KEY_USER_DICT);
+	if (!userPath.empty()) {
+		LoadDictFile(userPath, 1);
+	}
+}
+
+// 统计重码数量
+int CountDuplicatesForCode(const std::wstring& code) {
+	auto it = g_codeToEntries.find(code);
+	if (it == g_codeToEntries.end()) {
+		return 0;  // 无此编码
+	}
+	return (int)it->second.size();  // 返回该编码下的词条数量
+}
+
+// 统计所有重码（可选）
+int CountAllDuplicates() {
+	int duplicateCount = 0;
+	for (auto& entry : g_codeToEntries) {
+		if (entry.second.size() > 1) {
+			duplicateCount += (int)entry.second.size();
+		}
+	}
+	return duplicateCount;
 }

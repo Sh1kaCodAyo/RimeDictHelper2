@@ -17,3 +17,4 @@ std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
 WNDPROC g_oldWordProc = nullptr, g_oldCodeProc = nullptr, g_oldWeightProc = nullptr;
+std::wstring defaultMsg;

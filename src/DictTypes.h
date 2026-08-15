@@ -1,7 +1,8 @@
 // DictTypes.h
 #pragma once
-#include <string>
-#include <vector>
+#include "CommonInclude.h"
+// #include <string>
+// #include <vector>
 
 struct DictEntry {
     std::wstring text;      // 词条文字
@@ -10,3 +11,5 @@ struct DictEntry {
     std::wstring filePath;  // 来源文件路径（方便后续删除或修改）
     int lineNumber;         // 所在行号（方便定位）
 };
+
+extern std::unordered_map<std::wstring, std::vector<DictEntry>> g_codeToEntries;

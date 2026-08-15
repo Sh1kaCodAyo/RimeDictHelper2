@@ -3,3 +3,5 @@
 //
 
 #include "DictTypes.h"
+
+std::unordered_map<std::wstring, std::vector<DictEntry>> g_codeToEntries;

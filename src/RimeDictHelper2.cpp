@@ -109,6 +109,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 	SetFocus(hWord);
 	SendMessage(hWord, EM_SETSEL, 0, -1);
 	PostMessage(hWnd, WM_LOAD_DICT, 0, 0);
+	// LoadAllDicts();
 
 	return TRUE;
 }
@@ -321,9 +322,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		size_t dictSize = (size_t)lParam;
 
 		if (success) {
-			std::wstring msg = L"基本词库加载完成，共 " + std::to_wstring(dictSize) + L" 个单字";
-			SetStatusText(hWnd, msg);
-			OutputDebugString((msg + L"\n").c_str());
+			defaultMsg = L"基本词库加载完成，共 " + std::to_wstring(dictSize) + L" 个单字";
+			SetStatusText(hWnd, defaultMsg);
+			OutputDebugString((defaultMsg + L"\n").c_str());
 			getCode(hWnd);
 		}
 		else {

@@ -32,3 +32,4 @@ extern std::unordered_map<std::wstring, std::wstring> g_charCodeMap;
 extern WCHAR szTitle[MAX_LOADSTRING];
 extern WCHAR szWindowClass[MAX_LOADSTRING];
 extern WNDPROC g_oldWordProc, g_oldCodeProc, g_oldWeightProc;
+extern std::wstring defaultMsg;

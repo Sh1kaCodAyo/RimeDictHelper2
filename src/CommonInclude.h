@@ -7,6 +7,7 @@
 #include <string>
 #include <commctrl.h>
 #include <unordered_map>
+#include <vector>
 #include "framework.h"
 #include "Resource.h"
 #include "GlobalVariables.h"

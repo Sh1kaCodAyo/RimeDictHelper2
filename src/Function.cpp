@@ -57,7 +57,7 @@ void sync(HWND hWnd) {
 	enableSync = FALSE;
 	EnableWindow(hBtnSync, FALSE);
 	EnableWindow(hBtnAddSync, FALSE);
-	SetStatusText(hWnd, L"正在执行部署脚本...");
+	SetStatusText(hWnd, L"正在执行部署脚本，请勿关闭窗口");
 
 	// 构建命令行
 	std::wstring cmd = L"cmd.exe /c \"" + std::wstring(SCRIPT_NAME) + L"\"";
