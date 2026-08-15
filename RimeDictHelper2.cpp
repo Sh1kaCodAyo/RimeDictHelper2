@@ -3,7 +3,6 @@
 #define _UNICODE
 #include <windows.h>
 #include <string>
-#include <cstring>
 #include <commctrl.h>
 #include <unordered_map>
 #include "framework.h"
@@ -83,6 +82,8 @@ std::wstring getConfigValue(LPCWSTR lpKeyName) {
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine,
                       _In_ int nCmdShow) {
+    // volatile int wait = 0;
+    // while (wait == 0) {}
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -125,7 +126,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance) {
     wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_RIMEDICTHELPER2);
     wcex.lpszClassName = szWindowClass;
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-    wcscpy_s(szWindowClass, L"RimeDictHelper2Class");
+    // wcscpy_s(szWindowClass, L"RimeDictHelper2Class");
     return RegisterClassExW(&wcex);
 }
 
@@ -315,10 +316,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
     int x = (screenWidth - winWidth) / 3;
     int y = (screenHeight - winHeight) / 3;
 
-    HWND hWnd = CreateWindowW(L"RimeDictHelper2Class", L"RimeDictHelper2",
+    HWND hWnd = CreateWindowW(szWindowClass, szTitle,
                               WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
                               x, y, winWidth, winHeight, nullptr, nullptr, hInstance, nullptr);
-    // MessageBoxW(NULL, L"InitInstance 开始", L"调试", MB_OK);
 
     if (!hWnd) {
         DWORD err = GetLastError();
@@ -764,8 +764,8 @@ bool LoadBaseDict(const std::wstring &filePath) {
         // 每1000行输出一次进度（调试用）
         if (charCount % 1000 == 0) {
             OutputDebugString((L"已解析 " + std::to_wstring(charCount) +
-                                L" 行，当前词库大小 " +
-                                std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
+                               L" 行，当前词库大小 " +
+                               std::to_wstring(g_charCodeMap.size()) + L"\n").c_str());
         }
     }
 
