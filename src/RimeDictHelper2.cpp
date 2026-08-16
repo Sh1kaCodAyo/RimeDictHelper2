@@ -128,8 +128,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     // 为编码输入框设置最大长度
     SendMessage(hWord, EM_LIMITTEXT, 10, 0);
-    SendMessage(hCode, EM_LIMITTEXT, 4, 0);
+    // SendMessage(hCode, EM_LIMITTEXT, 4, 0);
     SendMessage(hWeight, EM_LIMITTEXT, 3, 0);
+    // 从 config.ini 中读取编码最大长度
+    std::wstring maxCodeLenStr = getConfigValue(L"MaxCodeLength");
+    int maxCodeLen;
+    try {
+        maxCodeLen = std::stoi(maxCodeLenStr);
+    } catch (const std::exception&) {
+        maxCodeLen = 4;
+    }
+    SendMessage(hCode, EM_LIMITTEXT, (WPARAM)maxCodeLen, 0);
+
 
     // 设置子类化
     g_oldWordProc = (WNDPROC)SetWindowLongPtr(hWord, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
@@ -200,12 +210,12 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
                 }
 
                 // 获取当前文本长度（考虑可能的中文输入法候选）
-                int len = GetWindowTextLengthW(hWnd);
-                if (len >= 4)
-                {
-                    MessageBeep(MB_ICONWARNING);
-                    return 0;
-                }
+                // int len = GetWindowTextLengthW(hWnd);
+                // if (len >= 4)
+                // {
+                //     MessageBeep(MB_ICONWARNING);
+                //     return 0;
+                // }
             }
 
             // 权重输入框限制
