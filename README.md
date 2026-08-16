@@ -27,7 +27,8 @@
 
 <figure>
 <img src="resource/interface.png" width="600"  alt="interface.png"/>
-<figcaption >软件主界面</figcaption>
+
+[//]: # (<figcaption >软件主界面</figcaption>)
 </figure>
 
 ## 3. 附加功能
@@ -101,11 +102,13 @@ rem 也可在“开始菜单-小狼毫输入法-【小狼毫】重新部署”�
 
 <figure>
 <img src="resource/maininterface.png" width="600"  alt="interface.png"/>
-<figcaption >删除词条</figcaption>
+
+[//]: # (<figcaption >删除词条</figcaption>)
 </figure>
 <figure>
 <img src="resource/modifyweight.png" width="600"  alt="interface.png"/>
-<figcaption >调整权重</figcaption>
+
+[//]: # (<figcaption >调整权重</figcaption>)
 </figure>
 
 *注意：重码管理和“添加”按钮本质上都是对本地配置的词库文件进行修改，不会立即生效。想要生效仍需点击“部署”按钮。*
