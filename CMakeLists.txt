@@ -37,6 +37,8 @@ add_executable(RimeDictHelper2 WIN32
         src/ScriptAdapter.cpp
         src/Function.h
         src/Function.cpp
+        src/WeightDialogInfo.cpp
+        src/WeightDialogInfo.h
 )
 
 # 复制依赖文件到构建目录

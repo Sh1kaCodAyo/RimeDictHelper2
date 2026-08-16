@@ -2,6 +2,8 @@
 #define _UNICODE
 #include "RimeDictHelper2.h"
 
+#include "WeightDialogInfo.h"
+
 /**
  * main()
  * @param hInstance
@@ -522,6 +524,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
         item.iItem = selectedIndex;
         ListView_GetItem(hListView, &item);
         DictEntry *pEntry = (DictEntry *)item.lParam;
+        std::wstring confirmMsg =
+            L"确定要删除词条 \"" + pEntry->text + L"\" 吗？\n此操作不可撤销！";
+        int confirmResult = MessageBoxW(hWnd, confirmMsg.c_str(), L"确认删除",
+                                        MB_OKCANCEL | MB_ICONWARNING);
+        if (confirmResult != IDOK) {
+          SetStatusText(hWnd, L"已取消删除");
+          break;
+        }
+
         if (pEntry != nullptr) {
           std::wstring text = pEntry->text;
           DictEntry entry = *pEntry;
@@ -531,7 +542,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
           if (DeleteLineFromFileByLineNumber(dictPath, entry.lineNumber)) {
             // 刷新缓存数据
             ReloadListView(hWnd);
-            std::wstring msg = std::wstring(L"已移除词条「") + entry.text +
+            std::wstring msg = std::wstring(L"已删除词条「") + entry.text +
                                std::wstring(L"」");
             SetStatusText(hWnd, msg);
           }
@@ -558,10 +569,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
           std::wstring text = pEntry->text;
           DictEntry entry = *pEntry;
           int initialWeight = entry.weight;
+          WeightDialogInfo info;
+          info.entryText = text;
+          info.initialWeight = initialWeight;
           // 调用对话框，将初始权重作为 lParam 传入
-          int result =
-              DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd,
-                              WeightDialogProc, (LPARAM)initialWeight);
+          int result = DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG),
+                                       hWnd, WeightDialogProc, (LPARAM)&info);
 
           if (result >= 0 && result <= 99) {
             // 弹出选择“确定”
@@ -625,11 +638,16 @@ INT_PTR CALLBACK WeightDialogProc(HWND hDlg, UINT message, WPARAM wParam,
                                   LPARAM lParam) {
   // 使用静态变量或窗口额外存储区来保存初始值和当前值
   static int currentValue = 0; // 可以存储到窗口额外数据中
+  static WeightDialogInfo *pData = nullptr;
 
   switch (message) {
   case WM_INITDIALOG: {
     // 从 lParam 中获取传入的初始权重值
-    currentValue = (int)lParam;
+    pData = (WeightDialogInfo *)lParam;
+    currentValue = pData->initialWeight;
+    // 设置窗口标题
+    std::wstring title = L"修改权重 - " + pData->entryText;
+    SetWindowTextW(hDlg, title.c_str());
     // 设置滑块范围
     SendDlgItemMessage(hDlg, IDC_SLIDER, TBM_SETRANGE, TRUE, MAKELONG(0, 99));
     // 设置滑块位置
