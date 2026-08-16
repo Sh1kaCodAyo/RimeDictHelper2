@@ -1,25 +1,8 @@
 //
 // Created by Ftwrjh on 2026/8/15.
 //
-
 #pragma once
 #include "CommonInclude.h"
-
-#define MAX_LOADSTRING 100
-#define ID_WORD 101
-#define ID_CODE 102
-#define ID_WEIGHT 103
-#define ID_CODE_BTN 115
-#define ID_ADD_BTN 112
-#define ID_SYNC_BTN 113
-#define ID_ADD_SYNC_BTN 114
-#define ID_LISTVIEW 115
-#define IDC_STATUSBAR 120
-#define WM_LOAD_DICT (WM_USER + 100)
-#define WM_LOAD_DICT_COMPLETE (WM_USER + 101)
-#define WM_SCRIPT_COMPLETE (WM_USER + 102)
-#define IDM_DELETE_ENTRY  1001
-#define IDM_EDIT_WEIGHT   1002
 
 // Global Variables:
 extern const wchar_t* CONFIG_FILE;

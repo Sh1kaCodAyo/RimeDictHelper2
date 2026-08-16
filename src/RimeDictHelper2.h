@@ -10,6 +10,7 @@ extern ATOM MyRegisterClass(HINSTANCE hInstance);
 extern BOOL InitInstance(HINSTANCE, int);
 extern LRESULT CALLBACK EditSubclassProc(HWND, UINT, WPARAM, LPARAM);
 extern LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+extern INT_PTR CALLBACK WeightDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 extern BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
 extern void SetStatusText(HWND hWnd, const std::wstring& text);
 extern void UpdateSyncButtonState(HWND hWnd);

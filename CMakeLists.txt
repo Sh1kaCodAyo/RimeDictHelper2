@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 20)
+# 在你的 CMakeLists.txt 中添加
+# 设置 Windows SDK 包含路径（如果系统环境变量未正确传递）
+#set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} /I \"D:/Windows Kits/10/Include/10.0.26100.0/ucrt\"")
 project(RimeDictHelper2 LANGUAGES CXX)
 
 if (MSVC)

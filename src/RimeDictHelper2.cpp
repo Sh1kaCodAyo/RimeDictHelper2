@@ -393,6 +393,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+        case IDM_EDIT_WEIGHT: {
+    // 假设你已获取当前选中词条的权重，并存于变量 initialWeight 中
+    int initialWeight = 50; // 示例：从你的数据结构中获取实际值
+
+    // 调用对话框，将初始权重作为 lParam 传入
+    int result = DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd, WeightDialogProc, (LPARAM)initialWeight);
+
+    if (result >= 0 && result <= 99) {
+        // 用户点击确定，result 即为修改后的权重
+        // 在这里执行更新词条权重的操作
+        // 例如：UpdateWeightForSelectedEntry(result);
+        MessageBoxW(hWnd, (L"权重已更新为: " + std::to_wstring(result)).c_str(), L"提示", MB_OK);
+    } else if (result == -1) {
+        // 用户点击取消，不做任何操作
+        SetStatusText(hWnd, L"已取消修改");
+    }
+    break;
+}
     case WM_NOTIFY: {
         LPNMHDR pnmh = (LPNMHDR)lParam;
         if (pnmh->idFrom == ID_LISTVIEW) {
@@ -600,8 +618,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             }
             case IDM_EDIT_WEIGHT: {
-                // 为未来扩展预留
-                MessageBoxW(hWnd, L"修改权重功能开发中...", L"提示", MB_OK);
+                // 假设你已获取当前选中词条的权重，并存于变量 initialWeight 中
+                int initialWeight = 50; // 示例：从你的数据结构中获取实际值
+
+                // 调用对话框，将初始权重作为 lParam 传入
+                int result = DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd, WeightDialogProc, (LPARAM)initialWeight);
+
+                if (result >= 0 && result <= 99) {
+                    // 用户点击确定，result 即为修改后的权重
+                    // 在这里执行更新词条权重的操作
+                    // 例如：UpdateWeightForSelectedEntry(result);
+                    MessageBoxW(hWnd, (L"权重已更新为: " + std::to_wstring(result)).c_str(), L"提示", MB_OK);
+                } else if (result == -1) {
+                    // 用户点击取消，不做任何操作
+                    SetStatusText(hWnd, L"已取消修改");
+                }
                 break;
             }
             // ... 其他已有命令 ...
@@ -636,7 +667,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
+INT_PTR CALLBACK WeightDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+    // 使用静态变量或窗口额外存储区来保存初始值和当前值
+    static int currentValue = 0; // 可以存储到窗口额外数据中
 
+    switch (message) {
+    case WM_INITDIALOG: {
+        // 从 lParam 中获取传入的初始权重值
+        currentValue = (int)lParam;
+        // 设置滑块范围
+        SendDlgItemMessage(hDlg, IDC_SLIDER, TBM_SETRANGE, TRUE, MAKELONG(0, 99));
+        // 设置滑块位置
+        SendDlgItemMessage(hDlg, IDC_SLIDER, TBM_SETPOS, TRUE, currentValue);
+        // 更新显示文本
+        SetDlgItemText(hDlg, IDC_VALUE_DISPLAY, (L"当前值: " + std::to_wstring(currentValue)).c_str());
+        return (INT_PTR)TRUE;
+    }
+
+    case WM_HSCROLL: {
+        // 当滑块滑动时，获取新位置并更新显示
+        int pos = (int)SendDlgItemMessage(hDlg, IDC_SLIDER, TBM_GETPOS, 0, 0);
+        currentValue = pos;
+        SetDlgItemText(hDlg, IDC_VALUE_DISPLAY, (L"当前值: " + std::to_wstring(pos)).c_str());
+        break;
+    }
+
+    case WM_COMMAND: {
+        if (LOWORD(wParam) == IDOK) {
+            // 用户点击确定，获取当前滑块值并结束对话框
+            currentValue = (int)SendDlgItemMessage(hDlg, IDC_SLIDER, TBM_GETPOS, 0, 0);
+            EndDialog(hDlg, currentValue); // 返回值作为结果
+            return (INT_PTR)TRUE;
+        }
+        if (LOWORD(wParam) == IDCANCEL) {
+            EndDialog(hDlg, -1); // 返回 -1 表示取消
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    }
+    return (INT_PTR)FALSE;
+}
 BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam)
 {
     SendMessage(hChild, WM_SETFONT, (WPARAM)lParam, TRUE);
