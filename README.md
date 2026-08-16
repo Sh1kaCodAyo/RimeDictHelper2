@@ -102,3 +102,5 @@ rem 也可在“开始菜单-小狼毫输入法-【小狼毫】重新部署”�
 总之脑补对拼音用户不是非常友好，不过也许也能用。
 
 目前还有些相关功能想要补充进去，无奈本人C++苦手，所以只能慢慢添加。
+
+> Icon designed using Source Code Pro font (Adobe, SIL OFL 1.1)
