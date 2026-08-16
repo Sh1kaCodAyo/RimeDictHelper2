@@ -70,7 +70,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 
   int screenWidth = GetSystemMetrics(SM_CXSCREEN);
   int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-  int winWidth = 600;
+  int winWidth = 650;
   int winHeight = 300;
 
   int x = (screenWidth - winWidth) / 3;
@@ -113,7 +113,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
   hListView = CreateWindowW(
       WC_LISTVIEWW, L"",
       WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_SINGLESEL, 310, 20,
-      250, 160, hWnd, (HMENU)ID_LISTVIEW, hInstance, nullptr);
+      300, 160, hWnd, (HMENU)ID_LISTVIEW, hInstance, nullptr);
   ListView_SetExtendedListViewStyle(hListView, LVS_EX_FULLROWSELECT);
 
   // 添加列
@@ -128,9 +128,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
   col.cx = 50; // 权重列宽
   col.pszText = LPWSTR(L"权重");
   ListView_InsertColumn(hListView, 2, &col);
-  col.cx = 70; // 来源列宽
+  col.cx = 60; // 来源列宽
   col.pszText = LPWSTR(L"来源");
   ListView_InsertColumn(hListView, 3, &col);
+  col.cx = 60; // 行号列宽
+  col.pszText = LPWSTR(L"行号");
+  ListView_InsertColumn(hListView, 4, &col);
 
   g_hFont =
       CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
