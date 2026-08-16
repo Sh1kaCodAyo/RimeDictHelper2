@@ -1,4 +1,5 @@
 ![RimeDictHelper2.ico](resource/RimeDictHelper2.ico)
+
 # RimeDictHelper2
 
 用于管理Rime输入法词库的小工具。功能简单，受众小众。主要自用，顺便分享，有缘人遇到可按需自取。
@@ -24,7 +25,10 @@
 + 自动生成词组编码（基于五笔词组编码规则）
 + 重码检测
 
-![interface.png](resource/interface.png)
+<figure>
+<img src="resource/interface.png" width="600"  alt="interface.png"/>
+<figcaption >软件主界面</figcaption>
+</figure>
 
 ## 3. 附加功能
 
