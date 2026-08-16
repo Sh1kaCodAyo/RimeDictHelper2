@@ -295,7 +295,7 @@ bool LoadDictFile(const std::wstring &filePath, int source) {
     int weight = _wtoi(str.substr(tab2 + 1).c_str());
 
     // 存入索引，同时记录行号
-    g_codeToEntries[code].push_back({text, weight, source, lineNumber});
+    g_codeToEntries[code].push_back({text, weight, source, lineNumber, code});
 
   }
 
@@ -421,4 +421,64 @@ bool UpdateWeightInFileByLineNumber(const std::wstring& filePath, int targetLine
   fclose(fp);
 
   return true;
+}
+bool DeleteLineFromFileByLineNumber(const std::wstring& filePath, int targetLineNumber) {
+  // 1. 读取整个文件到内存
+  FILE* fp = nullptr;
+  errno_t err = _wfopen_s(&fp, filePath.c_str(), L"r, ccs=UTF-8");
+  if (err != 0 || fp == nullptr) {
+    OutputDebugStringW((L"无法打开文件: " + filePath + L"\n").c_str());
+    return false;
+  }
+
+  std::vector<std::wstring> lines;
+  wchar_t lineBuffer[1024];
+  while (fgetws(lineBuffer, 1024, fp) != nullptr) {
+    lines.push_back(std::wstring(lineBuffer));
+  }
+  fclose(fp);
+
+  // 2. 校验行号是否有效
+  int lineIndex = targetLineNumber - 1; // 如果行号从0开始，则不需要减1
+  if (lineIndex < 0 || lineIndex >= (int)lines.size()) {
+    OutputDebugStringW(L"无效的行号\n");
+    return false;
+  }
+
+  // 3. 删除目标行
+  lines.erase(lines.begin() + lineIndex);
+
+  // 4. 写回文件
+  err = _wfopen_s(&fp, filePath.c_str(), L"w, ccs=UTF-8");
+  if (err != 0 || fp == nullptr) {
+    OutputDebugStringW(L"无法写入文件\n");
+    return false;
+  }
+  for (const auto& line : lines) {
+    fputws(line.c_str(), fp);
+  }
+  fclose(fp);
+
+  return true;
+}
+
+void RemoveEntryFromMemory(const std::wstring& code, const std::wstring& text, int source) {
+  auto it = g_codeToEntries.find(code);
+  if (it == g_codeToEntries.end()) {
+    return;
+  }
+
+  auto& entries = it->second;
+  // 查找匹配的词条（根据 text 和 source 匹配）
+  for (auto entryIt = entries.begin(); entryIt != entries.end(); ++entryIt) {
+    if (entryIt->text == text && entryIt->source == source) {
+      entries.erase(entryIt);
+      break;
+    }
+  }
+
+  // 如果该编码下没有词条了，移除整个编码条目
+  if (entries.empty()) {
+    g_codeToEntries.erase(it);
+  }
 }

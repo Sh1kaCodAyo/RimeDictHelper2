@@ -15,3 +15,4 @@ extern BOOL CALLBACK SetChildFont(HWND hChild, LPARAM lParam);
 extern void SetStatusText(HWND hWnd, const std::wstring& text);
 extern void UpdateSyncButtonState(HWND hWnd);
 extern INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+extern void ReloadListView(HWND hWnd);

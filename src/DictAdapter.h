@@ -21,3 +21,5 @@ extern int CountDuplicatesForCode(const std::wstring& code);
 extern int CountAllDuplicates();
 extern void UpdateConflictList(HWND hListView, const std::wstring& code);
 extern bool UpdateWeightInFileByLineNumber(const std::wstring& filePath, int targetLineNumber, int newWeight);
+extern bool DeleteLineFromFileByLineNumber(const std::wstring& filePath, int targetLineNumber);
+extern void RemoveEntryFromMemory(const std::wstring& code, const std::wstring& text, int source);

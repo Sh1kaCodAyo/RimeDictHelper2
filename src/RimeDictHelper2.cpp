@@ -511,47 +511,53 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
       DestroyWindow(hWnd);
       break;
     case IDM_DELETE_ENTRY: {
-      // 1. 获取当前选中的行
-      HWND hListView = GetDlgItem(hWnd, ID_LISTVIEW);
-      int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
-
-      int value = selectedIndex;
-      std::string output = "Value: " + std::to_string(value) + "\n";
-      OutputDebugStringA(output.c_str());
-      if (selectedIndex != -1) {
-        // 2. 执行删除逻辑（该函数需要你自己实现）
-        //    DeleteEntryByIndex(hListView, selectedIndex);
-        //    删除后，记得刷新右侧列表
-        //    UpdateConflictList(hListView, currentCode);
-      }
-      break;
-    }
-    // case IDM_EDIT_WEIGHT: {
-    //   break;
-    // }
-    case IDM_EDIT_WEIGHT: {
-      // 假设你已获取当前选中词条的权重，并存于变量 initialWeight 中
       // 1. 获取当前选中的行索引
       hListView = GetDlgItem(hWnd, ID_LISTVIEW);
       int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 
       if (selectedIndex != -1) {
-        // 2. 获取该行的 lParam
+        // 2. 获取该行的 lParam & 转换为DictEntry指针
         LVITEMW item = {0};
         item.mask = LVIF_PARAM;
         item.iItem = selectedIndex;
         ListView_GetItem(hListView, &item);
-
-        // 3. 转换为DictEntry指针
         DictEntry *pEntry = (DictEntry *)item.lParam;
         if (pEntry != nullptr) {
-
           std::wstring text = pEntry->text;
-          int weight = pEntry->weight;
           DictEntry entry = *pEntry;
+          std::wstring dictPath = (entry.source == 0)
+                                      ? getConfigValue(CONFIG_KEY_BASE_DICT)
+                                      : getConfigValue(CONFIG_KEY_USER_DICT);
+          if (DeleteLineFromFileByLineNumber(dictPath, entry.lineNumber)) {
+            // 刷新缓存数据
+            ReloadListView(hWnd);
+            std::wstring msg = std::wstring(L"已移除词条「") + entry.text +
+                               std::wstring(L"」");
+            SetStatusText(hWnd, msg);
+          }
+        }
+      }
 
+      // 弹出对话框获取新权重
+
+      break;
+    }
+    case IDM_EDIT_WEIGHT: { // 修改权重
+      // 1. 获取当前选中的行索引
+      hListView = GetDlgItem(hWnd, ID_LISTVIEW);
+      int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+
+      if (selectedIndex != -1) {
+        // 2. 获取该行的 lParam & 转换为DictEntry指针
+        LVITEMW item = {0};
+        item.mask = LVIF_PARAM;
+        item.iItem = selectedIndex;
+        ListView_GetItem(hListView, &item);
+        DictEntry *pEntry = (DictEntry *)item.lParam;
+        if (pEntry != nullptr) {
+          std::wstring text = pEntry->text;
+          DictEntry entry = *pEntry;
           int initialWeight = entry.weight;
-
           // 调用对话框，将初始权重作为 lParam 传入
           int result =
               DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd,
@@ -559,24 +565,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
 
           if (result >= 0 && result <= 99) {
             // 弹出选择“确定”
-            std::wstring msg = std::wstring(L"词条「") + entry.text +
-                               std::wstring(L"」权重已更新为: ") +
-                               std::to_wstring(result);
-            SetStatusText(hWnd, msg);
             // 确定要修改的词库文件路径
             std::wstring dictPath = (entry.source == 0)
                                         ? getConfigValue(CONFIG_KEY_BASE_DICT)
                                         : getConfigValue(CONFIG_KEY_USER_DICT);
-
             // 调用函数更新文件
             if (UpdateWeightInFileByLineNumber(dictPath, entry.lineNumber,
                                                result)) {
-              // 更新成功：修改内存中的 pEntry->weight = result，并刷新列表
-              pEntry->weight = result;
-              std::wstring newWeight = std::to_wstring(result);
-              ListView_SetItemText(hListView, selectedIndex, 2,
-                                   (LPWSTR)newWeight.c_str());
-              SetStatusText(hWnd, L"权重已更新");
+              // 刷新缓存数据
+              ReloadListView(hWnd);
+              std::wstring msg = std::wstring(L"词条「") + entry.text +
+                                 std::wstring(L"」权重已更新为: ") +
+                                 std::to_wstring(result);
+              SetStatusText(hWnd, msg);
             } else {
               MessageBoxW(hWnd, L"更新权重失败！", L"错误", MB_OK);
             }
@@ -711,4 +712,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
   }
   }
   return (INT_PTR)FALSE;
+}
+void ReloadListView(HWND hWnd) {
+  LoadAllDicts();
+  wchar_t currentCode[256];
+  GetDlgItemTextW(hWnd, ID_CODE, currentCode, 256);
+  UpdateConflictList(hListView, currentCode);
 }
