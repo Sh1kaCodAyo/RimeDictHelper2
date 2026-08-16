@@ -526,24 +526,69 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
       }
       break;
     }
+    // case IDM_EDIT_WEIGHT: {
+    //   break;
+    // }
     case IDM_EDIT_WEIGHT: {
       // 假设你已获取当前选中词条的权重，并存于变量 initialWeight 中
-      int initialWeight = 50; // 示例：从你的数据结构中获取实际值
+      // 1. 获取当前选中的行索引
+      hListView = GetDlgItem(hWnd, ID_LISTVIEW);
+      int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
 
-      // 调用对话框，将初始权重作为 lParam 传入
-      int result = DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd,
-                                   WeightDialogProc, (LPARAM)initialWeight);
+      if (selectedIndex != -1) {
+        // 2. 获取该行的 lParam
+        LVITEMW item = {0};
+        item.mask = LVIF_PARAM;
+        item.iItem = selectedIndex;
+        ListView_GetItem(hListView, &item);
 
-      if (result >= 0 && result <= 99) {
-        // 用户点击确定，result 即为修改后的权重
-        // 在这里执行更新词条权重的操作
-        // 例如：UpdateWeightForSelectedEntry(result);
-        MessageBoxW(hWnd, (L"权重已更新为: " + std::to_wstring(result)).c_str(),
-                    L"提示", MB_OK);
-      } else if (result == -1) {
-        // 用户点击取消，不做任何操作
-        SetStatusText(hWnd, L"已取消修改");
+        // 3. 转换为DictEntry指针
+        DictEntry *pEntry = (DictEntry *)item.lParam;
+        if (pEntry != nullptr) {
+
+          std::wstring text = pEntry->text;
+          int weight = pEntry->weight;
+          DictEntry entry = *pEntry;
+
+          int initialWeight = entry.weight;
+
+          // 调用对话框，将初始权重作为 lParam 传入
+          int result =
+              DialogBoxParamW(hInst, MAKEINTRESOURCE(IDD_WEIGHT_DLG), hWnd,
+                              WeightDialogProc, (LPARAM)initialWeight);
+
+          if (result >= 0 && result <= 99) {
+            // 弹出选择“确定”
+            std::wstring msg = std::wstring(L"词条「") + entry.text +
+                               std::wstring(L"」权重已更新为: ") +
+                               std::to_wstring(result);
+            SetStatusText(hWnd, msg);
+            // 确定要修改的词库文件路径
+            std::wstring dictPath = (entry.source == 0)
+                                        ? getConfigValue(CONFIG_KEY_BASE_DICT)
+                                        : getConfigValue(CONFIG_KEY_USER_DICT);
+
+            // 调用函数更新文件
+            if (UpdateWeightInFileByLineNumber(dictPath, entry.lineNumber,
+                                               result)) {
+              // 更新成功：修改内存中的 entry.weight = result，并刷新列表
+              entry.weight = result;
+              std::wstring newWeight = std::to_wstring(result);
+              ListView_SetItemText(hListView, selectedIndex, 2,
+                                   (LPWSTR)newWeight.c_str());
+              SetStatusText(hWnd, L"权重已更新");
+            } else {
+              MessageBoxW(hWnd, L"更新权重失败！", L"错误", MB_OK);
+            }
+          } else if (result == -1) {
+            // 弹出选择“确定”，不做任何操作
+            SetStatusText(hWnd, L"已取消修改");
+          }
+        }
       }
+
+      // 弹出对话框获取新权重
+
       break;
     }
     // ... 其他已有命令 ...

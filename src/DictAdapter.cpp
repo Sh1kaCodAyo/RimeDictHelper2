@@ -350,9 +350,10 @@ void UpdateConflictList(HWND hListView, const std::wstring &code) {
   int index = 0;
   for (const auto &entry : it->second) {
     LVITEMW item = {0};
-    item.mask = LVIF_TEXT;
+    item.mask = LVIF_TEXT | LVIF_PARAM;
     item.iItem = index;
     item.pszText = (LPWSTR)entry.text.c_str();
+    item.lParam = (LPARAM)&entry;
     ListView_InsertItem(hListView, &item);
 
     // 设置子项（编码、权重、来源）
@@ -369,4 +370,55 @@ void UpdateConflictList(HWND hListView, const std::wstring &code) {
     ListView_SetItemText(hListView, index, 4, (LPWSTR)lineNumberStr.c_str());
     index++;
   }
+}
+
+bool UpdateWeightInFileByLineNumber(const std::wstring& filePath, int targetLineNumber, int newWeight) {
+  // 1. 读取整个文件到内存
+  FILE* fp = nullptr;
+  errno_t err = _wfopen_s(&fp, filePath.c_str(), L"r, ccs=UTF-8");
+  if (err != 0 || fp == nullptr) {
+    OutputDebugStringW((L"无法打开文件: " + filePath + L"\n").c_str());
+    return false;
+  }
+
+  std::vector<std::wstring> lines;
+  wchar_t lineBuffer[1024];
+  while (fgetws(lineBuffer, 1024, fp) != nullptr) {
+    lines.push_back(std::wstring(lineBuffer));
+  }
+  fclose(fp);
+
+  // 2. 校验行号是否有效
+  int lineIndex = targetLineNumber - 1; // 如果行号从0开始，则不需要减1
+  if (lineIndex < 0 || lineIndex >= (int)lines.size()) {
+    OutputDebugStringW(L"无效的行号\n");
+    return false;
+  }
+
+  // 3. 解析目标行，修改权重
+  std::wstring& targetLine = lines[lineIndex];
+  // 按制表符分割
+  size_t firstTab = targetLine.find(L'\t');
+  size_t secondTab = targetLine.find(L'\t', firstTab + 1);
+  if (firstTab == std::wstring::npos || secondTab == std::wstring::npos) {
+    return false; // 格式错误
+  }
+
+  // 重新构建这一行：原文本 + \t + 原编码 + \t + 新权重 + \n
+  std::wstring textPart = targetLine.substr(0, firstTab);
+  std::wstring codePart = targetLine.substr(firstTab + 1, secondTab - firstTab - 1);
+  targetLine = textPart + L"\t" + codePart + L"\t" + std::to_wstring(newWeight) + L"\n";
+
+  // 4. 写回文件
+  err = _wfopen_s(&fp, filePath.c_str(), L"w, ccs=UTF-8");
+  if (err != 0 || fp == nullptr) {
+    OutputDebugStringW(L"无法写入文件\n");
+    return false;
+  }
+  for (const auto& line : lines) {
+    fputws(line.c_str(), fp);
+  }
+  fclose(fp);
+
+  return true;
 }
