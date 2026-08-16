@@ -1,5 +1,6 @@
 // 窗口相关功能
 #pragma once
+#include <windowsx.h>
 #include "CommonInclude.h"
 #include "DictAdapter.h"
 #include "ScriptAdapter.h"

@@ -102,6 +102,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
                                hInstance, nullptr);
     hListView = CreateWindowW(WC_LISTVIEWW, L"", WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_SINGLESEL,
                                    310, 20, 250, 160, hWnd, (HMENU)ID_LISTVIEW, hInstance, nullptr);
+    ListView_SetExtendedListViewStyle(hListView, LVS_EX_FULLROWSELECT);
 
     // 添加列
     LVCOLUMNW col = {0};
@@ -392,6 +393,103 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_NOTIFY: {
+        LPNMHDR pnmh = (LPNMHDR)lParam;
+        if (pnmh->idFrom == ID_LISTVIEW) {
+            switch (pnmh->code) {
+            case NM_RCLICK: {
+                // 1. 获取点击位置（屏幕坐标）
+                POINT pt;
+                GetCursorPos(&pt);
+
+                // 2. 将屏幕坐标转换为 ListView 的客户区坐标
+                HWND hListView = GetDlgItem(hWnd, ID_LISTVIEW);
+                POINT ptClient = pt;
+                ScreenToClient(hListView, &ptClient);
+
+                // 3. 检测点击在哪一行
+                LVHITTESTINFO hitInfo = {0};
+                hitInfo.pt = ptClient;
+                int itemIndex = ListView_HitTest(hListView, &hitInfo);
+
+                // 4. 如果点击不在任何项目上，不弹出菜单
+                if (itemIndex == -1) {
+                    break;
+                }
+
+                // 5. 选中该项目
+                ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+
+                // 6. 创建并弹出右键菜单
+                HMENU hMenu = CreatePopupMenu();
+                AppendMenuW(hMenu, MF_STRING, IDM_DELETE_ENTRY, L"删除词条");
+                // AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+                AppendMenuW(hMenu, MF_STRING, IDM_EDIT_WEIGHT, L"修改权重");
+
+                // 使用点击时的屏幕坐标 pt
+                TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
+                DestroyMenu(hMenu);
+
+                // 7. 告知系统我们已经处理了此通知
+                SetWindowLongPtr(hWnd, DWLP_MSGRESULT, TRUE);
+                return TRUE;
+            }
+            }
+        }
+        break;
+    }
+    // case WM_CONTEXTMENU: {
+    //     // 1. 判断消息是否来自我们的 ListView
+    //     HWND hListView = GetDlgItem(hWnd, ID_LISTVIEW); // 假设你的 ListView ID 是 ID_LISTVIEW
+    //     if ((HWND)wParam != hListView) {
+    //         break; // 不是我们的列表，忽略
+    //     }
+    //
+    //     // 2. 获取鼠标点击位置
+    //     POINT pt;
+    //     pt.x = GET_X_LPARAM(lParam);
+    //     pt.y = GET_Y_LPARAM(lParam);
+    //
+    //     // 3. 如果 lParam 是 (-1, -1)，表示是通过键盘（如 Shift+F10）触发的
+    //     if (pt.x == -1 && pt.y == -1) {
+    //         // 对于键盘触发，获取当前选中项的位置，将菜单显示在列表中间
+    //         RECT rect;
+    //         GetClientRect(hListView, &rect);
+    //         pt.x = rect.left + (rect.right - rect.left) / 2;
+    //         pt.y = rect.top + (rect.bottom - rect.top) / 2;
+    //         ClientToScreen(hListView, &pt);
+    //     } else {
+    //         // 鼠标触发，将客户区坐标转换为屏幕坐标
+    //         ClientToScreen(hWnd, &pt);
+    //     }
+    //
+    //     // 4. 获取点击位置对应的列表项索引
+    //     LVHITTESTINFO hitInfo = {0};
+    //     hitInfo.pt = pt;
+    //     ScreenToClient(hListView, &hitInfo.pt); // 转换回 ListView 客户区坐标
+    //     int itemIndex = ListView_HitTest(hListView, &hitInfo);
+    //
+    //     // 5. 如果点击不在任何项目上，不弹出菜单
+    //     if (itemIndex == -1) {
+    //         break;
+    //     }
+    //
+    //     // 6. 选中该项目（让用户看到操作目标）
+    //     ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    //
+    //     // 7. 创建并弹出右键菜单
+    //     HMENU hMenu = CreatePopupMenu();
+    //     AppendMenuW(hMenu, MF_STRING, IDM_DELETE_ENTRY, L"删除词条");
+    //     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    //     AppendMenuW(hMenu, MF_STRING, IDM_EDIT_WEIGHT, L"修改权重"); // 为未来扩展预留
+    //
+    //     // 弹出菜单，参数为窗口句柄、菜单句柄、屏幕坐标、对齐方式
+    //     TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
+    //     DestroyMenu(hMenu); // 清理资源
+    //
+    //     break;
+    // }
+
     case WM_LOAD_DICT:
         {
             OutputDebugString(L"开始异步加载基本词库...\n");
@@ -485,6 +583,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
+            case IDM_DELETE_ENTRY: {
+                // 1. 获取当前选中的行
+                HWND hListView = GetDlgItem(hWnd, ID_LISTVIEW);
+                int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+
+                int value = selectedIndex;
+                std::string output = "Value: " + std::to_string(value) + "\n";
+                OutputDebugStringA(output.c_str());
+                if (selectedIndex != -1) {
+                    // 2. 执行删除逻辑（该函数需要你自己实现）
+                    //    DeleteEntryByIndex(hListView, selectedIndex);
+                    //    删除后，记得刷新右侧列表
+                    //    UpdateConflictList(hListView, currentCode);
+                }
+                break;
+            }
+            case IDM_EDIT_WEIGHT: {
+                // 为未来扩展预留
+                MessageBoxW(hWnd, L"修改权重功能开发中...", L"提示", MB_OK);
+                break;
+            }
+            // ... 其他已有命令 ...
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }

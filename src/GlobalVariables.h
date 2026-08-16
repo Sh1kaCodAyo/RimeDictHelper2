@@ -18,6 +18,8 @@
 #define WM_LOAD_DICT (WM_USER + 100)
 #define WM_LOAD_DICT_COMPLETE (WM_USER + 101)
 #define WM_SCRIPT_COMPLETE (WM_USER + 102)
+#define IDM_DELETE_ENTRY  1001
+#define IDM_EDIT_WEIGHT   1002
 
 // Global Variables:
 extern const wchar_t* CONFIG_FILE;
