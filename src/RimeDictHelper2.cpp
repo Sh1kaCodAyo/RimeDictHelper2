@@ -571,8 +571,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
             // 调用函数更新文件
             if (UpdateWeightInFileByLineNumber(dictPath, entry.lineNumber,
                                                result)) {
-              // 更新成功：修改内存中的 entry.weight = result，并刷新列表
-              entry.weight = result;
+              // 更新成功：修改内存中的 pEntry->weight = result，并刷新列表
+              pEntry->weight = result;
               std::wstring newWeight = std::to_wstring(result);
               ListView_SetItemText(hListView, selectedIndex, 2,
                                    (LPWSTR)newWeight.c_str());
