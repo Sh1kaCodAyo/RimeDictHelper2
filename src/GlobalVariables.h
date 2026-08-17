@@ -10,7 +10,7 @@ extern const wchar_t* CONFIG_SECTION;
 extern const wchar_t* CONFIG_KEY_BASE_DICT;
 extern const wchar_t* CONFIG_KEY_USER_DICT;
 extern const wchar_t* SCRIPT_NAME;
-extern bool enableSync;
+extern bool enableSync, ctrlEnter;
 extern HFONT g_hFont;
 extern HINSTANCE hInst;
 extern HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, hListView, g_hWnd;

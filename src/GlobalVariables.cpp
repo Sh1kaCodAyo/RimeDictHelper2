@@ -9,7 +9,7 @@ const wchar_t* CONFIG_SECTION = L"Settings";
 const wchar_t* CONFIG_KEY_BASE_DICT = L"BaseDictPath";
 const wchar_t* CONFIG_KEY_USER_DICT = L"UserDictPath";
 const wchar_t* SCRIPT_NAME = L".\\after.bat";
-bool enableSync = TRUE;
+bool enableSync = TRUE, ctrlEnter = FALSE;
 HFONT g_hFont;
 HINSTANCE hInst;
 HWND hWord, hCode, hWeight, hParent, hStatusBar, hBtnAdd, hBtnSync, hBtnAddSync, hListView, g_hWnd;

@@ -320,6 +320,13 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam,
       if (!enableSync) {
         return 0;
       }
+      if (GetKeyState(VK_CONTROL) & 0x8000) {
+        ctrlEnter = TRUE;
+        OutputDebugString(L"Ctrl + Enter\n");
+      } else {
+        ctrlEnter = FALSE;
+        OutputDebugString(L"Enter\n");
+      }
       HWND hParent = GetParent(hWnd);
       addAndSync(hParent);
       return 0;
@@ -473,7 +480,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
     EnableWindow(hBtnAddSync, TRUE);
 
     if (exitCode == 0) {
-      SetStatusText(hWnd, L"部署完成");
+      if (ctrlEnter) {
+        SetStatusText(hWnd, L"部署完成，即将关闭窗口...2...");
+        Sleep(1000);
+        SetStatusText(hWnd, L"部署完成，即将关闭窗口...1...");
+        Sleep(1000);
+        SetStatusText(hWnd, L"部署完成，即将关闭窗口...0...");
+
+        DestroyWindow(hWnd);
+      } else {
+        SetStatusText(hWnd, L"部署完成");
+      }
     } else {
       SetStatusText(hWnd, L"部署失败，退出码: " + std::to_wstring(exitCode));
     }
