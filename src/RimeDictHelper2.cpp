@@ -431,7 +431,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
         AppendMenuW(hMenu, MF_STRING, IDM_EDIT_WEIGHT, L"修改权重");
 
         // 使用点击时的屏幕坐标 pt
-        TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
+        TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, nullptr);
         DestroyMenu(hMenu);
 
         // 7. 告知系统我们已经处理了此通知
