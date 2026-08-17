@@ -84,7 +84,22 @@ rem 也可在“开始菜单-小狼毫输入法-【小狼毫】重新部署”�
 
 ## 6. 使用方法&碎碎念
 
+```mermaid
+graph TD
+    A[启动RimeDictHelper2] --> B{输入词条}
+    B -->|五笔词条| C[自动生成词条编码]
+    B -->|非五笔词条| D[手动输入词条编码]
+    C --> E[修改编码]
+    D --> E
+    E -.-> F[调整权重]
+    F -.-> G[添加（并部署）]
+    G --> H[结束]
+
+    classDef optional fill:#,stroke:#666666,stroke-width:2px,stroke-dasharray: 5 5
+    class E,F optional
+```
 输入词条 → （确认编码） → （确认权重） → 确认添加，就这么简单。如果稍微详细点说：
+
 
 ### 6.1. 添加
 点击“添加”按钮，即将当前词条、编码、权重，拼接后追加到`UserDictPath`尾部。
