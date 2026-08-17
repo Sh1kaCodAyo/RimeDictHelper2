@@ -426,9 +426,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
 
         // 6. 创建并弹出右键菜单
         HMENU hMenu = CreatePopupMenu();
-        AppendMenuW(hMenu, MF_STRING, IDM_DELETE_ENTRY, L"删除词条");
         // AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hMenu, MF_STRING, IDM_EDIT_WEIGHT, L"修改权重");
+        AppendMenuW(hMenu, MF_STRING, IDM_DELETE_ENTRY, L"删除词条");
 
         // 使用点击时的屏幕坐标 pt
         TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, nullptr);
