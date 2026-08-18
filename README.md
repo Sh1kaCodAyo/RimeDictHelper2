@@ -1,4 +1,4 @@
-![RimeDictHelper2.ico](resource/RimeDictHelper2.ico)
+<img src="resource/RimeDictHelper2.png" width="300"  alt="RimeDictHelper2.png"/>
 
 # RimeDictHelper2
 
