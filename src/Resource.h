@@ -7,18 +7,21 @@
 #define IDR_MAINFRAME			128
 #define IDD_RIMEDICTHELPER2_DIALOG	102
 #define IDD_ABOUTBOX			103
-#define IDM_ABOUT				104
-#define IDM_EXIT				105
-#define IDM_RELOAD				116
-#define IDM_ADD				        117
-#define IDM_SYNC				118
-#define IDM_ADD_SYNC				119
 #define IDI_RIMEDICTHELPER2			107
 #define IDI_SMALL				108
 #define IDC_RIMEDICTHELPER2			109
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
+
+// menubar
+#define IDM_RELOAD 1511
+#define IDM_ADD 1512
+#define IDM_SYNC 1513
+#define IDM_ADD_SYNC 1514
+#define IDM_EXIT 1515
+#define IDM_HOME 1521
+#define IDM_ABOUT 1522
 // custom
 #define MAX_LOADSTRING 100
 // input
