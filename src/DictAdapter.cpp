@@ -224,14 +224,7 @@ void getCode(HWND hWnd) {
     codesw = codesw1.substr(0, 1) + codesw2.substr(0, 1) +
              codesw3.substr(0, 1) + codesw4.substr(0, 1);
   }
-  UpdateConflictList(hListView, codesw);
-  int count = CountDuplicatesForCode(codesw);
-  if (count == 0) {
-    SetStatusText(hWnd, L"当前编码无重码");
-  } else {
-    SetStatusText(
-        hWnd, (L"当前编码有 " + std::to_wstring(count) + L" 个词条").c_str());
-  }
+  UpdateConflictList(hWnd, codesw);
 
   // 显示编码
   SetWindowTextW(hCode, codesw.c_str());
@@ -340,7 +333,7 @@ int CountAllDuplicates() {
   return duplicateCount;
 }
 
-void UpdateConflictList(HWND hListView, const std::wstring &code) {
+void UpdateConflictList(HWND hWnd, const std::wstring &code) {
   ListView_DeleteAllItems(hListView);
 
   auto it = g_codeToEntries.find(code);
@@ -369,6 +362,13 @@ void UpdateConflictList(HWND hListView, const std::wstring &code) {
     std::wstring lineNumberStr = std::to_wstring(entry.lineNumber);
     ListView_SetItemText(hListView, index, 4, (LPWSTR)lineNumberStr.c_str());
     index++;
+  }
+  int count = CountDuplicatesForCode(code);
+  if (count == 0) {
+    SetStatusText(hWnd, L"当前编码无重码");
+  } else {
+    SetStatusText(hWnd, (L"当前编码有 " + std::to_wstring(count) + L" 个词条").c_str());
+    // SetStatusText(hWnd, L"qwert");
   }
 }
 

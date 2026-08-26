@@ -286,6 +286,12 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam,
         }
       }
     }
+    if (hWnd == hCode) {
+      // 获取当前文本
+      wchar_t code[256];
+      GetWindowTextW(hWnd, code, 256);
+      UpdateConflictList(GetParent(hWnd), code);
+    }
     break;
   }
 
@@ -320,13 +326,13 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam,
       if (!enableSync) {
         return 0;
       }
-      if (GetKeyState(VK_CONTROL) & 0x8000) {
-        ctrlEnter = TRUE;
-        OutputDebugString(L"Ctrl + Enter\n");
-      } else {
-        ctrlEnter = FALSE;
-        OutputDebugString(L"Enter\n");
-      }
+      // if (GetKeyState(VK_CONTROL) & 0x8000) {
+      //   ctrlEnter = TRUE;
+      //   OutputDebugString(L"Ctrl + Enter\n");
+      // } else {
+      //   ctrlEnter = FALSE;
+      //   OutputDebugString(L"Enter\n");
+      // }
       HWND hParent = GetParent(hWnd);
       addAndSync(hParent);
       return 0;
@@ -752,5 +758,5 @@ void ReloadListView(HWND hWnd) {
   LoadAllDicts();
   wchar_t currentCode[256];
   GetDlgItemTextW(hWnd, ID_CODE, currentCode, 256);
-  UpdateConflictList(hListView, currentCode);
+  UpdateConflictList(hWnd, currentCode);
 }

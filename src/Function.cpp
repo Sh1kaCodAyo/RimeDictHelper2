@@ -55,6 +55,13 @@ int add(HWND hWnd)
 
 void sync(HWND hWnd)
 {
+    if (GetKeyState(VK_CONTROL) & 0x8000) {
+        ctrlEnter = TRUE;
+        OutputDebugString(L"Ctrl + Enter\n");
+    } else {
+        ctrlEnter = FALSE;
+        OutputDebugString(L"Enter\n");
+    }
     // 检查脚本是否存在。正常情况下不会不存在（不存在的话按钮会被禁用，无法调用此方法）
     if (!IsSyncScriptAvailable())
     {
