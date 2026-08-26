@@ -9,6 +9,10 @@
 #define IDD_ABOUTBOX			103
 #define IDM_ABOUT				104
 #define IDM_EXIT				105
+#define IDM_RELOAD				116
+#define IDM_ADD				        117
+#define IDM_SYNC				118
+#define IDM_ADD_SYNC				119
 #define IDI_RIMEDICTHELPER2			107
 #define IDI_SMALL				108
 #define IDC_RIMEDICTHELPER2			109

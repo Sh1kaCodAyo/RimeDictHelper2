@@ -16,3 +16,4 @@ extern void SetStatusText(HWND hWnd, const std::wstring& text);
 extern void UpdateSyncButtonState(HWND hWnd);
 extern INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 extern void ReloadListView(HWND hWnd);
+extern void StartLoadDictionary(HWND hWnd);

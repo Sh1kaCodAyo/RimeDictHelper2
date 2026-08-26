@@ -326,13 +326,6 @@ LRESULT CALLBACK EditSubclassProc(HWND hWnd, UINT message, WPARAM wParam,
       if (!enableSync) {
         return 0;
       }
-      // if (GetKeyState(VK_CONTROL) & 0x8000) {
-      //   ctrlEnter = TRUE;
-      //   OutputDebugString(L"Ctrl + Enter\n");
-      // } else {
-      //   ctrlEnter = FALSE;
-      //   OutputDebugString(L"Enter\n");
-      // }
       HWND hParent = GetParent(hWnd);
       addAndSync(hParent);
       return 0;
@@ -450,15 +443,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
   }
 
   case WM_LOAD_DICT: {
-    OutputDebugString(L"开始异步加载基本词库...\n");
-    SetStatusText(hWnd, L"基本词库加载中...");
-    // 启动后台线程加载词库
-    HANDLE hThread = CreateThread(nullptr, 0, LoadDictThread, hWnd, 0, nullptr);
-    if (hThread) {
-      CloseHandle(hThread); // 分离线程，让系统回收
-    } else {
-      SetStatusText(hWnd, L"启动加载线程失败");
-    }
+    StartLoadDictionary(hWnd);
     break;
   }
   case WM_LOAD_DICT_COMPLETE: {
@@ -521,12 +506,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
       add(hWnd);
       break;
     }
+    case IDM_ADD: {
+      add(hWnd);
+      break;
+    }
     case ID_SYNC_BTN: {
+      sync(hWnd);
+      break;
+    }
+    case IDM_SYNC: {
       sync(hWnd);
       break;
     }
     case ID_ADD_SYNC_BTN: {
       addAndSync(hWnd);
+      break;
+    }
+    case IDM_ADD_SYNC: {
+      addAndSync(hWnd);
+      break;
+    }
+    case IDM_RELOAD: {
+      StartLoadDictionary(hWnd);
       break;
     }
     case IDM_ABOUT:
@@ -759,4 +760,14 @@ void ReloadListView(HWND hWnd) {
   wchar_t currentCode[256];
   GetDlgItemTextW(hWnd, ID_CODE, currentCode, 256);
   UpdateConflictList(hWnd, currentCode);
+}
+void StartLoadDictionary(HWND hWnd) {
+  OutputDebugString(L"开始异步加载基本词库...\n");
+  SetStatusText(hWnd, L"基本词库加载中...");
+  HANDLE hThread = CreateThread(nullptr, 0, LoadDictThread, hWnd, 0, nullptr);
+  if (hThread) {
+    CloseHandle(hThread);
+  } else {
+    SetStatusText(hWnd, L"启动加载线程失败");
+  }
 }

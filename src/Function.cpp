@@ -43,7 +43,8 @@ int add(HWND hWnd)
     {
         fputws(line, fp);
         fclose(fp);
-        SetStatusText(hWnd, L"添加完成！");
+        std::wstring swWord(word);
+        SetStatusText(hWnd, L"已添加词条：" + swWord);
         return 0;
     }
     else
