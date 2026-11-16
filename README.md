@@ -10,6 +10,7 @@
 如果你也：
 
 + 使用Windows平台（Linux系统也没问题，可移步Linux版，功能完全一致，界面更现代 [RimeDictHelper forLinux主页](https://github.com/Sh1kaCodAyo/RimeDictHelperLinux) ）
+
   <img src="resource/Linux-Light-MintL.png" width="600"  alt="LinuxLight.png"/>
   <img src="resource/Linux-Dark-MintX.png" width="600"  alt="LinuxLight.png"/>
 + 使用Rime输入法
